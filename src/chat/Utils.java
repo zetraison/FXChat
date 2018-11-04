@@ -1,6 +1,8 @@
 package chat;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class Utils {
@@ -57,5 +59,9 @@ public class Utils {
         urls.add("http://www.stickpng.com/assets/thumbs/5859b19e711f64423aa5e051.png");
 
         return urls;
+    }
+
+    public static String getCurrentTime() {
+        return new SimpleDateFormat("HH:mm").format(Calendar.getInstance().getTime());
     }
 }

@@ -9,9 +9,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.*;
-
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.List;
 
 
@@ -62,14 +59,9 @@ public class Controller {
     Button sendBtn;
 
     public void initialize() {
-        lPane.setPrefWidth(MIN_SIDE_PANE_WIDTH);
         initStickerWidget(Utils.getStickerPackCat(), "Cat");
         initStickerWidget(Utils.getStickerPackDog(), "Dog");
         initStickerWidget(Utils.getStickerPackPepe(), "Pepe");
-    }
-
-    private String getCurrentTime() {
-        return new SimpleDateFormat("HH:mm").format(Calendar.getInstance().getTime());
     }
 
     @FXML
@@ -92,7 +84,7 @@ public class Controller {
                 copyImageView.setFitWidth(STICKER_SIZE);
                 copyImageView.setFitHeight(STICKER_SIZE);
                 msgFlow.getChildren().add(copyImageView);
-                Text time = new Text(getCurrentTime() + "\n");
+                Text time = new Text(Utils.getCurrentTime() + "\n");
                 time.setFill(Color.GREY);
                 msgFlow.getChildren().add(time);
                 msgField.requestFocus();
@@ -111,7 +103,6 @@ public class Controller {
             if (index == urls.size()) {
                 rVBox.getChildren().add(hBox);
             }
-            rVBox.setBackground(Background.EMPTY);
             index++;
         }
     }
@@ -137,7 +128,7 @@ public class Controller {
         if (msgField.getText().isEmpty()) {
             return;
         }
-        Text time = new Text(getCurrentTime() + " ");
+        Text time = new Text(Utils.getCurrentTime() + " ");
         time.setFill(Color.GREY);
         time.setLineSpacing(100);
         msgFlow.getChildren().add(time);

@@ -6,6 +6,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.*;
@@ -62,9 +63,23 @@ public class Controller {
         initStickerWidget(Utils.getStickerPackCat(), "Cat");
         initStickerWidget(Utils.getStickerPackDog(), "Dog");
         initStickerWidget(Utils.getStickerPackPepe(), "Pepe");
+
+        // Set autoscrolling
+        cScrollPane.vvalueProperty().bind(msgFlow.heightProperty());
     }
 
-    @FXML
+    private void handleStickerMouseClick(MouseEvent event, ImageView imageView) {
+        Image copyImage = imageView.getImage();
+        ImageView copyImageView = new ImageView(copyImage);
+        copyImageView.setFitWidth(STICKER_SIZE);
+        copyImageView.setFitHeight(STICKER_SIZE);
+        msgFlow.getChildren().add(copyImageView);
+        Text time = new Text(Utils.getCurrentTime() + "\n");
+        time.setFill(Color.GREY);
+        msgFlow.getChildren().add(time);
+        msgField.requestFocus();
+    }
+
     private void initStickerWidget(List<String> urls, String title) {
         rVBox.getChildren().add(new Label(title));
 
@@ -73,27 +88,16 @@ public class Controller {
         int index = 1;
         for (String url: urls) {
             Image image = new Image(url, true);
-            ImageView imageView = new ImageView(image);
 
+            ImageView imageView = new ImageView(image);
             imageView.setFitHeight(MAX_SIDE_PANE_WIDTH / STICKER_ROW_LENGTH - 10);
             imageView.setFitWidth(MAX_SIDE_PANE_WIDTH / STICKER_ROW_LENGTH - 10);
-
-            imageView.setOnMouseClicked(event -> {
-                Image copyImage = imageView.getImage();
-                ImageView copyImageView = new ImageView(copyImage);
-                copyImageView.setFitWidth(STICKER_SIZE);
-                copyImageView.setFitHeight(STICKER_SIZE);
-                msgFlow.getChildren().add(copyImageView);
-                Text time = new Text(Utils.getCurrentTime() + "\n");
-                time.setFill(Color.GREY);
-                msgFlow.getChildren().add(time);
-                msgField.requestFocus();
-            });
 
             BorderPane imageViewWrapper = new BorderPane(imageView);
             imageViewWrapper.setPrefWidth(MAX_SIDE_PANE_WIDTH / STICKER_ROW_LENGTH);
             imageViewWrapper.setPrefHeight(MAX_SIDE_PANE_WIDTH / STICKER_ROW_LENGTH);
             imageViewWrapper.getStyleClass().add("image-view-wrapper");
+            imageViewWrapper.setOnMouseClicked(event -> handleStickerMouseClick(event, imageView));
 
             hBox.getChildren().add(imageViewWrapper);
             if (index % STICKER_ROW_LENGTH == 0) {

@@ -1,4 +1,4 @@
-package chat;
+package client;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -8,20 +8,20 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
-    private static final double WIDTH = 1400.0;
-    private static final double HEIGHT = 750.0;
+    private static final double WIDTH = 1000.0;
+    private static final double HEIGHT = 600.0;
 
     @Override
     public void start(Stage primaryStage) throws Exception{
         Parent root = FXMLLoader.load(getClass().getResource("ui.fxml"));
         primaryStage.setTitle("FXChat");
-        primaryStage.setMinWidth(WIDTH / 2);
-        primaryStage.setMinHeight(HEIGHT / 2);
-
+        primaryStage.setMinWidth(WIDTH);
+        primaryStage.setMinHeight(HEIGHT);
         Scene scene = new Scene(root, WIDTH, HEIGHT);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
+
 
     public static void main(String[] args) {
         launch(args);

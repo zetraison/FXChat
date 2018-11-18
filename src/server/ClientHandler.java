@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.stream.Collectors;
 
 public class ClientHandler {
 
@@ -31,6 +32,11 @@ public class ClientHandler {
                                 sendMsg("/authok " + newNick);
                                 nick = newNick;
                                 server.subscribe(ClientHandler.this);
+                                server.broadcastMsg("/userlogin " +
+                                        server.getClients()
+                                                .stream()
+                                                .map(ClientHandler::getNick)
+                                                .collect(Collectors.joining(" ")));
                                 break;
                             } else {
                                 sendMsg("Incorrect logo/pass");

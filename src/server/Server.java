@@ -3,6 +3,7 @@ package server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 import java.util.Vector;
 
 public class Server {
@@ -64,5 +65,9 @@ public class Server {
 
     public void unsubscribe(ClientHandler clientHandler) {
         clients.remove(clientHandler);
+    }
+
+    public Vector<ClientHandler> getClients() {
+        return clients;
     }
 }

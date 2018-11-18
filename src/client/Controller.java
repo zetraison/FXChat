@@ -20,6 +20,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 
@@ -29,8 +31,10 @@ public class Controller {
     @FXML AnchorPane lPane;
     @FXML AnchorPane cPane;
     @FXML AnchorPane rPane;
+    @FXML ScrollPane lScrollPane;
     @FXML ScrollPane cScrollPane;
     @FXML ScrollPane rScrollPane;
+    @FXML VBox lVBox;
     @FXML VBox cVBox;
     @FXML VBox rVBox;
     @FXML HBox cHBox;
@@ -48,6 +52,7 @@ public class Controller {
     private static final int STICKER_SIZE = 200;
 
     private boolean isAuthorized;
+    private String currentUser;
 
     Socket socket;
     DataOutputStream out;
@@ -85,7 +90,7 @@ public class Controller {
 
     public void connect() {
         try {
-            socket = new Socket("localhost", 8183);
+            socket = new Socket("localhost", 8082);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
@@ -95,6 +100,7 @@ public class Controller {
                         String str = in.readUTF();
                         if (str.startsWith("/authok")) {
                             String[] tokens = str.split(" ");
+                            currentUser = tokens[1];
                             setAuthorized(true);
                             break;
                         } else {
@@ -106,6 +112,12 @@ public class Controller {
                         String str = in.readUTF();
                         if (str.equals("/serverclosed")) {
                             break;
+                        }
+                        if (str.startsWith("/userlogin")) {
+                            LinkedList<String> tokens = new LinkedList<>(Arrays.asList(str.split(" ")));
+                            tokens.remove(0);
+                            appendUser(tokens);
+                            continue;
                         }
                         appendMessage(str);
                     }
@@ -136,6 +148,21 @@ public class Controller {
             text.setLineSpacing(100);
             text.setFill(Color.GHOSTWHITE);
             msgFlow.getChildren().add(text);
+        });
+    }
+
+    private void appendUser(LinkedList<String> users) {
+        Platform.runLater(() -> {
+            lVBox.getChildren().clear();
+            for (String user: users) {
+                Label label;
+                if (user.equals(currentUser)) {
+                    label = new Label(user + "(you)");
+                } else {
+                    label = new Label(user);
+                }
+                lVBox.getChildren().add(label);
+            }
         });
     }
 

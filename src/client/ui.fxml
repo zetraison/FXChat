@@ -15,7 +15,14 @@
 
 <SplitPane fx:id="splitPane" dividerPositions="0.5, 0.5" minHeight="400.0" minWidth="800.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="client.Controller">
     <items>
-        <AnchorPane fx:id="lPane" maxWidth="300.0" minWidth="300.0" />
+        <AnchorPane fx:id="lPane" maxWidth="300.0" minWidth="300.0">
+         <children>
+            <ScrollPane fx:id="lScrollPane" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+               <content>
+                   <VBox fx:id="lVBox" />
+               </content>
+            </ScrollPane>
+         </children></AnchorPane>
         <AnchorPane fx:id="cPane">
             <children>
                 <VBox fx:id="authVBox" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">

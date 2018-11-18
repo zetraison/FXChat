@@ -13,7 +13,7 @@
 <?import javafx.scene.text.TextFlow?>
 <?scenebuilder-stylesheet /client.css/style.client.css ?>
 
-<SplitPane fx:id="splitPane" dividerPositions="0.5, 0.5" minHeight="400.0" minWidth="800.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="client.Controller">
+<SplitPane fx:id="splitPane" dividerPositions="0.5, 0.5" minHeight="400.0" minWidth="800.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="client.Controller">
     <items>
         <AnchorPane fx:id="lPane" maxWidth="300.0" minWidth="300.0">
          <children>
@@ -30,7 +30,7 @@
                     <HBox alignment="CENTER" maxHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label text="Login" />
-                            <TextField fx:id="loginField" minWidth="200.0" />
+                            <TextField fx:id="loginField" minWidth="200.0" onKeyTyped="#loginFieldOnKeyTyped" />
                         </children>
                     </HBox>
                     <HBox alignment="CENTER" maxHeight="50.0" VBox.vgrow="ALWAYS">
@@ -39,6 +39,7 @@
                             <PasswordField fx:id="passwordField" minWidth="200.0" onAction="#tryToAuth" />
                         </children>
                     </HBox>
+                    <HBox fx:id="errorHBox" alignment="CENTER" maxHeight="50.0" VBox.vgrow="ALWAYS" />
                     <HBox minHeight="200.0" VBox.vgrow="ALWAYS" />
                 </VBox>
                 <VBox fx:id="cVBox" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
@@ -50,8 +51,8 @@
                         </ScrollPane>
                         <HBox fx:id="cHBox" maxHeight="40.0" minHeight="40.0" VBox.vgrow="ALWAYS">
                             <children>
-                                <TextField fx:id="msgField" onKeyPressed="#handleOnKeyPressed" promptText="Введите сообщение..." HBox.hgrow="ALWAYS" />
-                                <Button fx:id="stickerBtn" onAction="#toogleRightPane" prefHeight="50" prefWidth="50" text="☺" HBox.hgrow="ALWAYS" />
+                                <TextField fx:id="msgField" onKeyPressed="#msgFieldOnKeyPressed" promptText="Введите сообщение..." HBox.hgrow="ALWAYS" />
+                                <Button fx:id="stickerBtn" onAction="#stickerBtnOnAction" prefHeight="50" prefWidth="50" text="☺" HBox.hgrow="ALWAYS" />
                                 <Button fx:id="sendBtn" onAction="#sendMsg" prefHeight="50" prefWidth="50" text="⮚" HBox.hgrow="ALWAYS" />
                             </children>
                         </HBox>

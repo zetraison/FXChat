@@ -7,7 +7,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -38,6 +37,7 @@ public class Controller {
     @FXML VBox cVBox;
     @FXML VBox rVBox;
     @FXML HBox cHBox;
+    @FXML HBox errorHBox;
     @FXML TextFlow msgFlow;
     @FXML TextField msgField;
     @FXML Button stickerBtn;
@@ -53,10 +53,9 @@ public class Controller {
 
     private boolean isAuthorized;
     private String currentUser;
-
-    Socket socket;
-    DataOutputStream out;
-    DataInputStream in;
+    private Socket socket;
+    private DataOutputStream out;
+    private DataInputStream in;
 
     public void initialize() {
         // Init auth form
@@ -70,7 +69,7 @@ public class Controller {
         cScrollPane.vvalueProperty().bind(msgFlow.heightProperty());
     }
 
-    public void setAuthorized(boolean isAuthorized) {
+    private void setAuthorized(boolean isAuthorized) {
         this.isAuthorized = isAuthorized;
         if (!this.isAuthorized) {
             authVBox.setVisible(true);
@@ -88,7 +87,7 @@ public class Controller {
 
     }
 
-    public void connect() {
+    private void connect() {
         try {
             socket = new Socket("localhost", 8082);
             in = new DataInputStream(socket.getInputStream());
@@ -98,27 +97,50 @@ public class Controller {
                 try {
                     while (true) {
                         String str = in.readUTF();
+                        /*
+                         * /authok <user>
+                         */
                         if (str.startsWith("/authok")) {
+                            hideError();
                             String[] tokens = str.split(" ");
                             currentUser = tokens[1];
                             setAuthorized(true);
-                            break;
-                        } else {
-                            appendMessage(str);
+                            continue;
                         }
-                    }
-
-                    while (true) {
-                        String str = in.readUTF();
-                        if (str.equals("/serverclosed")) {
-                            break;
-                        }
+                        /*
+                         * /userlogin <users>
+                         */
                         if (str.startsWith("/userlogin")) {
                             LinkedList<String> tokens = new LinkedList<>(Arrays.asList(str.split(" ")));
                             tokens.remove(0);
                             appendUser(tokens);
                             continue;
                         }
+                        /*
+                         * /sticker <username> <url>
+                         */
+                        if (str.startsWith("/sticker")) {
+                            String[] tokens = str.split(" ");
+                            appendTime();
+                            appendNickname(tokens[1]);
+                            appendSticker(tokens[2]);
+                            continue;
+                        }
+                        /*
+                         * /error <message>
+                         */
+                        if (str.startsWith("/error")) {
+                            String[] tokens = str.split(" ");
+                            showError(tokens[1]);
+                            continue;
+                        }
+                        /*
+                         * /serverclosed
+                         */
+                        if (str.equals("/serverclosed")) {
+                            break;
+                        }
+                        appendTime();
                         appendMessage(str);
                     }
                 } catch (IOException e) {
@@ -137,15 +159,25 @@ public class Controller {
         }
     }
 
-    private void appendMessage(String msg) {
+    private void appendTime() {
         Platform.runLater(() -> {
             Text time = new Text(Utils.getCurrentTime() + " ");
             time.setFill(Color.GREY);
-            time.setLineSpacing(100);
             msgFlow.getChildren().add(time);
+        });
+    }
 
+    private void appendNickname(String nickname) {
+        Platform.runLater(() -> {
+            Text time = new Text(nickname + " ");
+            time.setFill(Color.GOLD);
+            msgFlow.getChildren().add(time);
+        });
+    }
+
+    private void appendMessage(String msg) {
+        Platform.runLater(() -> {
             Text text = new Text(msg + "\n");
-            text.setLineSpacing(100);
             text.setFill(Color.GHOSTWHITE);
             msgFlow.getChildren().add(text);
         });
@@ -155,21 +187,56 @@ public class Controller {
         Platform.runLater(() -> {
             lVBox.getChildren().clear();
             for (String user: users) {
-                Label label;
-                if (user.equals(currentUser)) {
-                    label = new Label(user + "(you)");
-                } else {
-                    label = new Label(user);
-                }
-                lVBox.getChildren().add(label);
+                lVBox.getChildren().add(
+                        new Label(user + (user.equals(currentUser) ? " (you)" : ""))
+                );
             }
         });
     }
 
+    private void appendSticker(String url) {
+        Platform.runLater(() -> {
+            Image image = new Image(url, true);
+
+            ImageView imageView = new ImageView(image);
+            imageView.setFitHeight(STICKER_SIZE);
+            imageView.setFitWidth(STICKER_SIZE);
+
+            msgFlow.getChildren().add(new Text("\n"));
+            msgFlow.getChildren().add(imageView);
+            msgFlow.getChildren().add(new Text("\n\n\n"));
+        });
+    }
+
+    private void showError(String msg) {
+        Platform.runLater(() -> {
+            errorHBox.getChildren().clear();
+            Text text = new Text(msg);
+            text.setFill(Color.RED);
+            errorHBox.getChildren().add(text);
+            loginField.requestFocus();
+        });
+    }
+
+    private void hideError() {
+        Platform.runLater(() -> errorHBox.getChildren().clear());
+    }
+
     public void sendMsg() {
+        if (msgField.getText().isEmpty())
+            return;
         try {
-            out.writeUTF(msgField.getText());
+            out.writeUTF(currentUser + " " + msgField.getText());
             msgField.clear();
+            msgField.requestFocus();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendSticker(String url) {
+        try {
+            out.writeUTF("/sticker " + currentUser + " " + url);
             msgField.requestFocus();
         } catch (IOException e) {
             e.printStackTrace();
@@ -189,14 +256,18 @@ public class Controller {
         }
     }
 
-    public void handleOnKeyPressed(KeyEvent event)
+    public void loginFieldOnKeyTyped(KeyEvent event) {
+        hideError();
+    }
+
+    public void msgFieldOnKeyPressed(KeyEvent event)
     {
         if (event.getCode().equals(KeyCode.ENTER)) {
             sendMsg();
         }
     }
 
-    public void toogleRightPane() {
+    public void stickerBtnOnAction() {
         SplitPane.Divider rightDivider = splitPane.getDividers().get(1);
         double currentPosition = rightDivider.getPosition();
         double rightPaneWidth = rPane.getWidth();
@@ -209,18 +280,6 @@ public class Controller {
             rPane.setMaxWidth(MAX_SIDE_PANE_WIDTH);
             rightDivider.setPosition(currentPosition);
         }
-    }
-
-    private void handleStickerMouseClick(MouseEvent event, ImageView imageView) {
-        Image copyImage = imageView.getImage();
-        ImageView copyImageView = new ImageView(copyImage);
-        copyImageView.setFitWidth(STICKER_SIZE);
-        copyImageView.setFitHeight(STICKER_SIZE);
-        msgFlow.getChildren().add(copyImageView);
-        Text time = new Text(Utils.getCurrentTime() + "\n");
-        time.setFill(Color.GREY);
-        msgFlow.getChildren().add(time);
-        msgField.requestFocus();
     }
 
     private void initStickerWidget(List<String> urls, String title) {
@@ -240,7 +299,10 @@ public class Controller {
             imageViewWrapper.setPrefWidth(MAX_SIDE_PANE_WIDTH / STICKER_ROW_LENGTH);
             imageViewWrapper.setPrefHeight(MAX_SIDE_PANE_WIDTH / STICKER_ROW_LENGTH);
             imageViewWrapper.getStyleClass().add("image-view-wrapper");
-            imageViewWrapper.setOnMouseClicked(event -> handleStickerMouseClick(event, imageView));
+            imageViewWrapper.setOnMouseClicked(event -> {
+                sendSticker(url);
+                msgField.requestFocus();
+            });
 
             hBox.getChildren().add(imageViewWrapper);
             if (index % STICKER_ROW_LENGTH == 0) {

@@ -25,6 +25,7 @@ public class ClientHandler {
                 try {
                     while (true) {
                         String str = in.readUTF();
+                        // /auth <login> <password>
                         if (str.startsWith("/auth")) {
                             String[] tokens = str.split(" ");
                             String newNick = AuthService.getNickname(tokens[1], tokens[2]);
@@ -37,24 +38,21 @@ public class ClientHandler {
                                                 .stream()
                                                 .map(ClientHandler::getNick)
                                                 .collect(Collectors.joining(" ")));
-                                break;
                             } else {
-                                sendMsg("Incorrect logo/pass");
+                                sendMsg("/error Incorrect_Logo/Pass");
                             }
+                            continue;
                         }
-                    }
-
-                    while (true) {
-                        String str = in.readUTF();
-                        System.out.println(str);
+                        // /w <username> <message>
+                        if (str.startsWith("/w")) {
+                            String[] tokens = str.split(" ");
+                            server.sendMsgToClient(tokens[1], tokens[2]);
+                            continue;
+                        }
+                        // /end
                         if (str.equals("/end")) {
                             out.writeUTF("/serverclosed");
                             break;
-                        }
-                        if (str.startsWith("/w")) {
-                            String[] tokens = str.split(" ");
-                            server.sendMsg(tokens[1], tokens[2]);
-                            continue;
                         }
                         server.broadcastMsg(str);
                     }

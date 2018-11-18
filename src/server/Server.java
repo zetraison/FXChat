@@ -49,9 +49,8 @@ public class Server {
         }
     }
 
-    public void sendMsg(String nickname, String msg) {
+    public void sendMsgToClient(String nickname, String msg) {
         for (ClientHandler o : clients) {
-            System.out.println(o.getNick());
             if (o.getNick().equals(nickname)) {
                 o.sendMsg(msg);
             }

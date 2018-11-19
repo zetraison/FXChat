@@ -104,9 +104,6 @@ public class Controller {
                 EventEnum eventEnum = EventEnum.fromValue(event);
 
                 switch (eventEnum) {
-                    case AUTH: {
-                        continue;
-                    }
                     case AUTH_OK: {
                         hideError();
                         setAuthorized(true);
@@ -114,7 +111,7 @@ public class Controller {
                         continue;
                     }
                     case USER_LOGIN: {
-                        appendUser(tokens.subList(1, tokens.size()));
+                        appendUsers(tokens.subList(1, tokens.size()));
                         continue;
                     }
                     case ERROR: {
@@ -174,13 +171,11 @@ public class Controller {
         });
     }
 
-    private void appendUser(List<String> users) {
+    private void appendUsers(List<String> users) {
         Platform.runLater(() -> {
             lVBox.getChildren().clear();
             for (String user: users) {
-                lVBox.getChildren().add(
-                        new Label(user + (user.equals(currentUser) ? " (you)" : ""))
-                );
+                lVBox.getChildren().add(new Label(user + (user.equals(currentUser) ? " (you)" : "")));
             }
         });
     }
@@ -246,7 +241,9 @@ public class Controller {
         List<String> tokens = Arrays.asList(msgField.getText().split(" "));
         switch (EventEnum.fromValue(tokens.get(0))) {
             case PRIVATE_MESSAGE: {
-                sendEvent(EventEnum.PRIVATE_MESSAGE.getValue(), tokens.get(1), currentUser, String.join(" ", tokens.subList(2, tokens.size())));
+                String toUser = tokens.get(1);
+                String message = String.join(" ", tokens.subList(2, tokens.size()));
+                sendEvent(EventEnum.PRIVATE_MESSAGE.getValue(), toUser, currentUser, message);
                 break;
             }
             default: {
@@ -254,7 +251,6 @@ public class Controller {
                 break;
             }
         }
-
         msgField.clear();
         msgField.requestFocus();
     }
@@ -267,13 +263,9 @@ public class Controller {
         if (socket == null || socket.isClosed()) {
             connect();
         }
-        try {
-            out.writeUTF("/auth " + loginField.getText() + " " + passwordField.getText());
-            loginField.clear();
-            passwordField.clear();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        sendEvent(EventEnum.AUTH.getValue(), loginField.getText(), passwordField.getText());
+        loginField.clear();
+        passwordField.clear();
     }
 
     public void loginFieldOnKeyTyped(KeyEvent event) {

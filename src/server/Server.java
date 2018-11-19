@@ -3,7 +3,6 @@ package server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.List;
 import java.util.Vector;
 
 public class Server {
@@ -43,16 +42,16 @@ public class Server {
         }
     }
 
-    public void broadcastMsg(String msg) {
-        for (ClientHandler o : clients) {
-            o.sendMsg(msg);
+    public void broadcastEvent(String ... args) {
+        for (ClientHandler client : clients) {
+            client.sendEvent(args);
         }
     }
 
-    public void sendMsgToClient(String nickname, String msg) {
-        for (ClientHandler o : clients) {
-            if (o.getNick().equals(nickname)) {
-                o.sendMsg(msg);
+    public void personalMsg(String nickname, String ...args) {
+        for (ClientHandler client : clients) {
+            if (client.getNick().equals(nickname)) {
+                client.sendEvent(args);
             }
         }
     }

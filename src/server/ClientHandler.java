@@ -1,9 +1,13 @@
 package server;
 
+import client.EventEnum;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class ClientHandler {
@@ -21,70 +25,79 @@ public class ClientHandler {
             this.in = new DataInputStream(socket.getInputStream());
             this.out = new DataOutputStream(socket.getOutputStream());
 
-            new Thread(() -> {
-                try {
-                    while (true) {
-                        String str = in.readUTF();
-                        // /auth <login> <password>
-                        if (str.startsWith("/auth")) {
-                            String[] tokens = str.split(" ");
-                            String newNick = AuthService.getNickname(tokens[1], tokens[2]);
-                            if (newNick != null) {
-                                sendMsg("/authok " + newNick);
-                                nick = newNick;
-                                server.subscribe(ClientHandler.this);
-                                server.broadcastMsg("/userlogin " +
-                                        server.getClients()
-                                                .stream()
-                                                .map(ClientHandler::getNick)
-                                                .collect(Collectors.joining(" ")));
-                            } else {
-                                sendMsg("/error Incorrect_Logo/Pass");
-                            }
-                            continue;
-                        }
-                        // /w <username> <message>
-                        if (str.startsWith("/w")) {
-                            String[] tokens = str.split(" ");
-                            server.sendMsgToClient(tokens[1], tokens[2]);
-                            continue;
-                        }
-                        // /end
-                        if (str.equals("/end")) {
-                            out.writeUTF("/serverclosed");
-                            break;
-                        }
-                        server.broadcastMsg(str);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        out.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        socket.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    server.unsubscribe(ClientHandler.this);
-                }
-            }).start();
+            new Thread(this::eventLoop).start();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void sendMsg(String msg) {
+    private void eventLoop() {
         try {
-            out.writeUTF(msg);
+            while (true) {
+                String str = in.readUTF();
+                List<String> tokens = Arrays.asList(str.split(" "));
+                String event = tokens.get(0);
+                System.out.println("[EVENT]: " + tokens);
+
+                EventEnum eventEnum = EventEnum.fromValue(event);
+
+                switch (eventEnum) {
+                    case AUTH: {
+                        String nick = AuthService.getNickname(tokens.get(1), tokens.get(2));
+                        if (nick == null) {
+                            sendEvent(EventEnum.ERROR.getValue(), "Incorrect logo/pass");
+                            continue;
+                        }
+                        this.nick = nick;
+                        sendEvent(EventEnum.AUTH_OK.getValue(), nick);
+                        server.subscribe(ClientHandler.this);
+                        server.broadcastEvent(EventEnum.USER_LOGIN.getValue(), server.getClients().stream()
+                                .map(ClientHandler::getNick).collect(Collectors.joining(" ")));
+                        continue;
+                    }
+                    case PRIVATE_MESSAGE: {
+                        server.personalMsg(tokens.get(1), EventEnum.MESSAGE.getValue(), tokens.get(2), String.join(" ", tokens.subList(3, tokens.size())));
+                        continue;
+                    }
+                    case END: {
+                        sendEvent(EventEnum.SERVER_CLOSED.getValue());
+                        break;
+                    }
+                    case MESSAGE: {
+                        server.broadcastEvent(EventEnum.MESSAGE.getValue(), tokens.get(1), String.join(" ", tokens.subList(2, tokens.size())));
+                        continue;
+                    }
+                    case STICKER: {
+                        server.broadcastEvent(EventEnum.STICKER.getValue(), tokens.get(1), tokens.get(2));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                in.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                out.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            server.unsubscribe(ClientHandler.this);
+        }
+    }
+
+    public void sendEvent(String ... args) {
+        try {
+            out.writeUTF(String.join(" ", Arrays.asList(args)));
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -20,7 +20,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 
@@ -69,93 +68,85 @@ public class Controller {
         cScrollPane.vvalueProperty().bind(msgFlow.heightProperty());
     }
 
-    private void setAuthorized(boolean isAuthorized) {
-        this.isAuthorized = isAuthorized;
-        if (!this.isAuthorized) {
-            authVBox.setVisible(true);
-            cVBox.setVisible(false);
-            lPane.setMaxWidth(0);
-            rPane.setMaxWidth(0);
-            lPane.setMinWidth(0);
-            rPane.setMinWidth(0);
-        } else {
-            authVBox.setVisible(false);
-            cVBox.setVisible(true);
-            lPane.setMinWidth(MIN_SIDE_PANE_WIDTH);
-            lPane.setMaxWidth(MAX_SIDE_PANE_WIDTH);
-        }
-
-    }
-
     private void connect() {
         try {
             socket = new Socket("localhost", 8082);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
-            new Thread(() -> {
-                try {
-                    while (true) {
-                        String str = in.readUTF();
-                        /*
-                         * /authok <user>
-                         */
-                        if (str.startsWith("/authok")) {
-                            hideError();
-                            String[] tokens = str.split(" ");
-                            currentUser = tokens[1];
-                            setAuthorized(true);
-                            continue;
-                        }
-                        /*
-                         * /userlogin <users>
-                         */
-                        if (str.startsWith("/userlogin")) {
-                            LinkedList<String> tokens = new LinkedList<>(Arrays.asList(str.split(" ")));
-                            tokens.remove(0);
-                            appendUser(tokens);
-                            continue;
-                        }
-                        /*
-                         * /sticker <username> <url>
-                         */
-                        if (str.startsWith("/sticker")) {
-                            String[] tokens = str.split(" ");
-                            appendTime();
-                            appendNickname(tokens[1]);
-                            appendSticker(tokens[2]);
-                            continue;
-                        }
-                        /*
-                         * /error <message>
-                         */
-                        if (str.startsWith("/error")) {
-                            String[] tokens = str.split(" ");
-                            showError(tokens[1]);
-                            continue;
-                        }
-                        /*
-                         * /serverclosed
-                         */
-                        if (str.equals("/serverclosed")) {
-                            break;
-                        }
-                        appendTime();
-                        appendMessage(str);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        socket.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
+            new Thread(this::eventLoop).start();
 
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     *  Available event description
+     *
+     *  /auth <login> <password>
+     *  /authok <username>
+     *  /userlogin <users>
+     *  /sticker <username> <url>
+     *  /error <message>
+     *  /serverclosed
+     *  /message <username> <message>
+     *  /w <username_to> <username_from> <message>
+     */
+    private void eventLoop() {
+        try {
+            while (true) {
+                String str = in.readUTF();
+                List<String> tokens = Arrays.asList(str.split(" "));
+                String event = tokens.get(0);
+                System.out.println("[EVENT]: " + tokens);
+
+                EventEnum eventEnum = EventEnum.fromValue(event);
+
+                switch (eventEnum) {
+                    case AUTH: {
+                        continue;
+                    }
+                    case AUTH_OK: {
+                        hideError();
+                        setAuthorized(true);
+                        currentUser = tokens.get(1);
+                        continue;
+                    }
+                    case USER_LOGIN: {
+                        appendUser(tokens.subList(1, tokens.size()));
+                        continue;
+                    }
+                    case ERROR: {
+                        showError(String.join(" ", tokens.subList(1, tokens.size())));
+                        continue;
+                    }
+                    case MESSAGE:
+                    case PRIVATE_MESSAGE: {
+                        appendTime();
+                        appendNickname(tokens.get(1));
+                        appendMessage(String.join(" ", tokens.subList(2, tokens.size())));
+                        continue;
+                    }
+                    case STICKER: {
+                        appendTime();
+                        appendNickname(tokens.get(1));
+                        appendSticker(tokens.get(2));
+                        continue;
+                    }
+                    case SERVER_CLOSED: {
+                        break;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -183,7 +174,7 @@ public class Controller {
         });
     }
 
-    private void appendUser(LinkedList<String> users) {
+    private void appendUser(List<String> users) {
         Platform.runLater(() -> {
             lVBox.getChildren().clear();
             for (String user: users) {
@@ -222,25 +213,54 @@ public class Controller {
         Platform.runLater(() -> errorHBox.getChildren().clear());
     }
 
-    public void sendMsg() {
-        if (msgField.getText().isEmpty())
-            return;
+    private void setAuthorized(boolean isAuthorized) {
+        this.isAuthorized = isAuthorized;
+        if (!this.isAuthorized) {
+            authVBox.setVisible(true);
+            cVBox.setVisible(false);
+            lPane.setMaxWidth(0);
+            rPane.setMaxWidth(0);
+            lPane.setMinWidth(0);
+            rPane.setMinWidth(0);
+        } else {
+            authVBox.setVisible(false);
+            cVBox.setVisible(true);
+            lPane.setMinWidth(MIN_SIDE_PANE_WIDTH);
+            lPane.setMaxWidth(MAX_SIDE_PANE_WIDTH);
+        }
+    }
+
+    private void sendEvent(String ...args) {
         try {
-            out.writeUTF(currentUser + " " + msgField.getText());
-            msgField.clear();
+            out.writeUTF(String.join(" ", Arrays.asList(args)));
             msgField.requestFocus();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void sendSticker(String url) {
-        try {
-            out.writeUTF("/sticker " + currentUser + " " + url);
-            msgField.requestFocus();
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void sendMsg() {
+        if (msgField.getText().isEmpty())
+            return;
+
+        List<String> tokens = Arrays.asList(msgField.getText().split(" "));
+        switch (EventEnum.fromValue(tokens.get(0))) {
+            case PRIVATE_MESSAGE: {
+                sendEvent(EventEnum.PRIVATE_MESSAGE.getValue(), tokens.get(1), currentUser, String.join(" ", tokens.subList(2, tokens.size())));
+                break;
+            }
+            default: {
+                sendEvent(EventEnum.MESSAGE.getValue(), currentUser, msgField.getText());
+                break;
+            }
         }
+
+        msgField.clear();
+        msgField.requestFocus();
+    }
+
+    private void sendSticker(String url) {
+        sendEvent(EventEnum.STICKER.getValue(), currentUser, url);
     }
 
     public void tryToAuth() {

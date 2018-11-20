@@ -1,6 +1,8 @@
 * {
-    -fx-main-color: rgba(35, 32, 41, 0.96);
-    -fx-second-color: rgba(35, 32, 41, 0.96);
+    /*-fx-main-color: rgba(35, 32, 41, 0.96);*/
+    /*-fx-second-color: rgba(35, 32, 41, 0.96);*/
+    -fx-main-color: rgba(37, 41, 38, 0.96);
+    -fx-second-color: rgba(30, 41, 33, 0.96);
     -fx-text-color: rgba(170, 170, 170, 0.96);
     -fx-text-color-hover: rgba(60, 170, 110, 0.96);
 }

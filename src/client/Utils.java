@@ -1,4 +1,4 @@
-package chat;
+package client;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;

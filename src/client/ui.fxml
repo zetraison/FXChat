@@ -26,14 +26,14 @@
         <AnchorPane fx:id="cPane">
             <children>
                 <VBox fx:id="authVBox" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                    <HBox minHeight="200.0" VBox.vgrow="ALWAYS" />
-                    <HBox alignment="CENTER" maxHeight="50.0" VBox.vgrow="ALWAYS">
+                    <HBox minHeight="200.0"  maxHeight="200.0" VBox.vgrow="ALWAYS" />
+                    <HBox alignment="CENTER" minHeight="50.0" maxHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label text="Login" />
                             <TextField fx:id="loginField" minWidth="200.0" onKeyTyped="#loginFieldOnKeyTyped" />
                         </children>
                     </HBox>
-                    <HBox alignment="CENTER" maxHeight="50.0" VBox.vgrow="ALWAYS">
+                    <HBox alignment="CENTER" minHeight="50.0" maxHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label text="Password" />
                             <PasswordField fx:id="passwordField" minWidth="200.0" onAction="#tryToAuth" />

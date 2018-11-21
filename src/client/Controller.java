@@ -14,10 +14,12 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import javafx.stage.Stage;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
@@ -70,14 +72,33 @@ public class Controller {
 
     private void connect() {
         try {
-            socket = new Socket("localhost", 8082);
+            socket = new Socket();
+            socket.connect(new InetSocketAddress("localhost", 8082), 10000);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
+            new Thread(this::resetSocketOnTimeout).start();
             new Thread(this::eventLoop).start();
 
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void resetSocketOnTimeout() {
+        try {
+            Thread.sleep(120000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (!isAuthorized) {
+            try {
+                socket.close();
+                Stage stage = (Stage) rPane.getScene().getWindow();
+                stage.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -110,10 +131,6 @@ public class Controller {
                         currentUser = tokens.get(1);
                         continue;
                     }
-                    case USER_LOGIN: {
-                        appendUsers(tokens.subList(1, tokens.size()));
-                        continue;
-                    }
                     case ERROR: {
                         showError(String.join(" ", tokens.subList(1, tokens.size())));
                         continue;
@@ -129,6 +146,10 @@ public class Controller {
                         appendTime();
                         appendNickname(tokens.get(1));
                         appendSticker(tokens.get(2));
+                        continue;
+                    }
+                    case CLIENTLIST: {
+                        appendUsers(tokens.subList(1, tokens.size()));
                         continue;
                     }
                     case SERVER_CLOSED: {
@@ -244,6 +265,20 @@ public class Controller {
                 String toUser = tokens.get(1);
                 String message = String.join(" ", tokens.subList(2, tokens.size()));
                 sendEvent(EventEnum.PRIVATE_MESSAGE.getValue(), toUser, currentUser, message);
+                break;
+            }
+            case BLACKLIST: {
+                String toUser = tokens.get(1);
+                sendEvent(EventEnum.BLACKLIST.getValue(), toUser);
+                break;
+            }
+            case WHITELIST: {
+                String toUser = tokens.get(1);
+                sendEvent(EventEnum.WHITELIST.getValue(), toUser);
+                break;
+            }
+            case END: {
+                sendEvent(EventEnum.END.getValue());
                 break;
             }
             default: {

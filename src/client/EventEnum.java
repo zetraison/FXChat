@@ -3,13 +3,16 @@ package client;
 public enum EventEnum {
   AUTH("/auth"),
   AUTH_OK("/authok"),
+  BLACKLIST("/blacklist"),
+  CLIENTLIST("/clientlist"),
   END("/end"),
   ERROR("/error"),
   MESSAGE("/message"),
   PRIVATE_MESSAGE("/w"),
   SERVER_CLOSED("/serverclosed"),
   STICKER("/sticker"),
-  USER_LOGIN("/userlogin");
+  USER_LOGIN("/userlogin"),
+  WHITELIST("/whitelist");
 
   private final String value;
 

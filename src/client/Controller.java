@@ -72,8 +72,7 @@ public class Controller {
 
     private void connect() {
         try {
-            socket = new Socket();
-            socket.connect(new InetSocketAddress("localhost", 8082), 10000);
+            socket = new Socket("localhost", 8082);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
@@ -94,8 +93,6 @@ public class Controller {
         if (!isAuthorized) {
             try {
                 socket.close();
-                Stage stage = (Stage) rPane.getScene().getWindow();
-                stage.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }

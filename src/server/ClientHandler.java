@@ -46,7 +46,10 @@ public class ClientHandler {
 
                 switch (eventEnum) {
                     case AUTH: {
-                        String nick = AuthService.getNickname(tokens.get(1), tokens.get(2));
+                        String nick = null;
+                        if (tokens.get(1) != null && tokens.get(2) != null) {
+                            nick = AuthService.getNickname(tokens.get(1), tokens.get(2));
+                        }
                         if (nick == null) {
                             sendEvent(EventEnum.ERROR.getValue(), "Incorrect logo/pass!");
                             continue;
@@ -56,8 +59,25 @@ public class ClientHandler {
                             continue;
                         }
                         this.nick = nick;
+                        this.blackList = AuthService.getUserBlacklist(nick);
                         sendEvent(EventEnum.AUTH_OK.getValue(), nick);
                         server.subscribe(ClientHandler.this);
+                        continue;
+                    }
+                    case REGISTER: {
+                        if (tokens.get(1) != null && tokens.get(2) != null && tokens.get(3) != null) {
+                            String username = tokens.get(1);
+                            String login = tokens.get(2);
+                            String passwordHash = AuthService.MD5(tokens.get(3));
+
+                            AuthService.addUser(username, login, passwordHash);
+                        } else {
+                            sendEvent(EventEnum.ERROR.getValue(), "Incorrect username/logo/pass!");
+                        }
+                        continue;
+                    }
+                    case HELP: {
+                        sendEvent(EventEnum.HELP.getValue(), nick);
                         continue;
                     }
                     case PRIVATE_MESSAGE: {
@@ -72,14 +92,28 @@ public class ClientHandler {
                         server.broadcastEvent(this, EventEnum.STICKER.getValue(), tokens.get(1), tokens.get(2));
                         continue;
                     }
+                    case IMAGE: {
+                        server.broadcastEvent(this, EventEnum.IMAGE.getValue(), tokens.get(1), tokens.get(2));
+                        continue;
+                    }
                     case BLACKLIST: {
-                        blackList.add(tokens.get(1));
-                        sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Add user " + tokens.get(1) + " to blacklist");
+                        boolean result = AuthService.addToBlacklist(this.getNick(), tokens.get(1));
+                        this.blackList = AuthService.getUserBlacklist(nick);
+                        if (result) {
+                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Add user " + tokens.get(1) + " to blacklist");
+                        } else {
+                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Error on adding user " + tokens.get(1) + " to blacklist");
+                        }
                         continue;
                     }
                     case WHITELIST: {
-                        blackList.remove(tokens.get(1));
-                        sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Remove user " + tokens.get(1) + " from blacklist");
+                        boolean result = AuthService.removeFromBlacklist(this.getNick(), tokens.get(1));
+                        this.blackList = AuthService.getUserBlacklist(nick);
+                        if (result) {
+                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Remove user " + tokens.get(1) + " from blacklist");
+                        } else {
+                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Error on removind user " + tokens.get(1) + " to blacklist");
+                        }
                         continue;
                     }
                     case END: {

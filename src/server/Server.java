@@ -1,5 +1,7 @@
 package server;
 
+import client.EventEnum;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -42,13 +44,15 @@ public class Server {
         }
     }
 
-    public void broadcastEvent(String ... args) {
+    public void broadcastEvent(ClientHandler from, String ... args) {
         for (ClientHandler client : clients) {
-            client.sendEvent(args);
+            if (!client.checkBlackList(from.getNick())) {
+                client.sendEvent(args);
+            }
         }
     }
 
-    public void personalMsg(String nickname, String ...args) {
+    public void privateEvent(String nickname, String ...args) {
         for (ClientHandler client : clients) {
             if (client.getNick().equals(nickname)) {
                 client.sendEvent(args);
@@ -59,13 +63,36 @@ public class Server {
     public void subscribe(ClientHandler clientHandler) {
         System.out.println("Client authorized " + clientHandler.getNick());
         clients.add(clientHandler);
+        broadcastClientList();
     }
 
     public void unsubscribe(ClientHandler clientHandler) {
         clients.remove(clientHandler);
+        broadcastClientList();
     }
 
     public Vector<ClientHandler> getClients() {
         return clients;
+    }
+
+    public boolean isNickBusy(String nickname) {
+        for (ClientHandler client: clients) {
+            if (client.getNick().equalsIgnoreCase(nickname)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void broadcastClientList() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(EventEnum.CLIENTLIST.getValue() + " ");
+        for (ClientHandler client: clients) {
+            sb.append(client.getNick() + " ");
+        }
+        String out = sb.toString();
+        for (ClientHandler client: clients) {
+            client.sendEvent(out);
+        }
     }
 }

@@ -42,8 +42,13 @@ public class Controller {
     @FXML Button stickerBtn;
     @FXML Button sendBtn;
     @FXML VBox authVBox;
+    @FXML TextField usernameField;
     @FXML TextField loginField;
     @FXML PasswordField passwordField;
+    @FXML Button registerBtn;
+    @FXML Button loginBtn;
+    @FXML Button saveUserBtn;
+    @FXML Label usernameLabel;
 
     private static final double MIN_SIDE_PANE_WIDTH = 300.0;
     private static final double MAX_SIDE_PANE_WIDTH = 300.0;
@@ -51,6 +56,7 @@ public class Controller {
     private static final int STICKER_SIZE = 200;
 
     private boolean isAuthorized;
+    private boolean isRegister;
     private String currentUser;
     private Socket socket;
     private DataOutputStream out;
@@ -59,6 +65,7 @@ public class Controller {
     public void initialize() {
         // Init auth form
         setAuthorized(false);
+        setRegister(false);
         // Init main form
         initStickerWidget(Utils.getStickerPackCat(), "Cat");
         initStickerWidget(Utils.getStickerPackDog(), "Dog");
@@ -66,6 +73,10 @@ public class Controller {
 
         // Set autoscrolling
         cScrollPane.vvalueProperty().bind(msgFlow.heightProperty());
+
+        Text text = new Text("Type /help for get more information about available service command.\n");
+        text.setFill(Color.GREEN);
+        msgFlow.getChildren().add(text);
     }
 
     private void connect() {
@@ -74,6 +85,7 @@ public class Controller {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
+            new Thread(this::resetSocketOnTimeout).start();
             new Thread(this::eventLoop).start();
 
         } catch (IOException e) {
@@ -81,17 +93,32 @@ public class Controller {
         }
     }
 
+    private void resetSocketOnTimeout() {
+        try {
+            Thread.sleep(120000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (!isAuthorized) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     /**
-     *  Available event description
+     *  Available service command
      *
      *  /auth <login> <password>
      *  /authok <username>
-     *  /userlogin <users>
      *  /sticker <username> <url>
      *  /error <message>
+     *  /register <username> <login> <password>
      *  /serverclosed
      *  /message <username> <message>
-     *  /w <username_to> <username_from> <message>
+     *  /w <username> <message>
      */
     private void eventLoop() {
         try {
@@ -108,10 +135,6 @@ public class Controller {
                         hideError();
                         setAuthorized(true);
                         currentUser = tokens.get(1);
-                        continue;
-                    }
-                    case USER_LOGIN: {
-                        appendUsers(tokens.subList(1, tokens.size()));
                         continue;
                     }
                     case ERROR: {
@@ -131,6 +154,20 @@ public class Controller {
                         appendSticker(tokens.get(2));
                         continue;
                     }
+                    case IMAGE: {
+                        appendTime();
+                        appendNickname(tokens.get(1));
+                        appendImage(tokens.get(2));
+                        continue;
+                    }
+                    case HELP: {
+                        appendHelpInfo();
+                        continue;
+                    }
+                    case CLIENTLIST: {
+                        appendUsers(tokens.subList(1, tokens.size()));
+                        continue;
+                    }
                     case SERVER_CLOSED: {
                         break;
                     }
@@ -145,6 +182,38 @@ public class Controller {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void appendHelpInfo() {
+        Platform.runLater(() -> {
+            Text text = new Text("\nAvailable service command list:\n\n");
+            text.setFill(Color.GREEN);
+            msgFlow.getChildren().add(text);
+            text = new Text("- Send private message:\n");
+            text.setFill(Color.GREEN);
+            msgFlow.getChildren().add(text);
+            text = new Text("      /w <username> <message>\n");
+            text.setFill(Color.GREENYELLOW);
+            msgFlow.getChildren().add(text);
+            text = new Text("- Add user to blacklist:\n");
+            text.setFill(Color.GREEN);
+            msgFlow.getChildren().add(text);
+            text = new Text("      /blacklist <username> \n");
+            text.setFill(Color.GREENYELLOW);
+            msgFlow.getChildren().add(text);
+            text = new Text("- Remove user from blacklist:\n");
+            text.setFill(Color.GREEN);
+            msgFlow.getChildren().add(text);
+            text = new Text("      /whitelist <username> \n");
+            text.setFill(Color.GREENYELLOW);
+            msgFlow.getChildren().add(text);
+            text = new Text("- Send image by url:\n");
+            text.setFill(Color.GREEN);
+            msgFlow.getChildren().add(text);
+            text = new Text("      /image <username> <url>\n\n");
+            text.setFill(Color.GREENYELLOW);
+            msgFlow.getChildren().add(text);
+        });
     }
 
     private void appendTime() {
@@ -187,6 +256,18 @@ public class Controller {
             ImageView imageView = new ImageView(image);
             imageView.setFitHeight(STICKER_SIZE);
             imageView.setFitWidth(STICKER_SIZE);
+
+            msgFlow.getChildren().add(new Text("\n"));
+            msgFlow.getChildren().add(imageView);
+            msgFlow.getChildren().add(new Text("\n\n\n"));
+        });
+    }
+
+    private void appendImage(String url) {
+        Platform.runLater(() -> {
+            Image image = new Image(url, true);
+
+            ImageView imageView = new ImageView(image);
 
             msgFlow.getChildren().add(new Text("\n"));
             msgFlow.getChildren().add(imageView);
@@ -246,6 +327,30 @@ public class Controller {
                 sendEvent(EventEnum.PRIVATE_MESSAGE.getValue(), toUser, currentUser, message);
                 break;
             }
+            case BLACKLIST: {
+                String toUser = tokens.get(1);
+                sendEvent(EventEnum.BLACKLIST.getValue(), toUser);
+                break;
+            }
+            case WHITELIST: {
+                String toUser = tokens.get(1);
+                sendEvent(EventEnum.WHITELIST.getValue(), toUser);
+                break;
+            }
+            case HELP: {
+                sendEvent(EventEnum.HELP.getValue());
+                break;
+            }
+            case IMAGE: {
+                String toUser = tokens.get(1);
+                String url = tokens.get(2);
+                sendEvent(EventEnum.IMAGE.getValue(), toUser, url);
+                break;
+            }
+            case END: {
+                sendEvent(EventEnum.END.getValue());
+                break;
+            }
             default: {
                 sendEvent(EventEnum.MESSAGE.getValue(), currentUser, msgField.getText());
                 break;
@@ -266,6 +371,41 @@ public class Controller {
         sendEvent(EventEnum.AUTH.getValue(), loginField.getText(), passwordField.getText());
         loginField.clear();
         passwordField.clear();
+    }
+
+    public void showRegister() {
+        setRegister(true);
+    }
+
+    public void setRegister(boolean isRegister) {
+        this.isRegister = isRegister;
+        if (isRegister) {
+            usernameLabel.setVisible(true);
+            usernameField.setVisible(true);
+            saveUserBtn.setVisible(true);
+            loginBtn.setVisible(false);
+            registerBtn.setVisible(false);
+            usernameField.clear();
+            loginField.clear();
+            passwordField.clear();
+            usernameField.requestFocus();
+        } else {
+            usernameLabel.setVisible(false);
+            usernameField.setVisible(false);
+            saveUserBtn.setVisible(false);
+            loginBtn.setVisible(true);
+            registerBtn.setVisible(true);
+            loginField.requestFocus();
+        }
+    }
+
+    public void saveUser() {
+        if (socket == null || socket.isClosed()) {
+            connect();
+        }
+        sendEvent(EventEnum.REGISTER.getValue(), usernameField.getText(), loginField.getText(), passwordField.getText());
+        usernameField.clear();
+        setRegister(false);
     }
 
     public void loginFieldOnKeyTyped(KeyEvent event) {

@@ -16,30 +16,43 @@
 <SplitPane fx:id="splitPane" dividerPositions="0.5, 0.5" minHeight="400.0" minWidth="800.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="client.Controller">
     <items>
         <AnchorPane fx:id="lPane" maxWidth="300.0" minWidth="300.0">
-         <children>
-            <ScrollPane fx:id="lScrollPane" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-               <content>
-                   <VBox fx:id="lVBox" />
-               </content>
-            </ScrollPane>
-         </children></AnchorPane>
+            <children>
+                <ScrollPane fx:id="lScrollPane" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                    <content>
+                        <VBox fx:id="lVBox" />
+                    </content>
+                </ScrollPane>
+            </children></AnchorPane>
         <AnchorPane fx:id="cPane">
             <children>
                 <VBox fx:id="authVBox" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                    <HBox minHeight="200.0"  maxHeight="200.0" VBox.vgrow="ALWAYS" />
-                    <HBox alignment="CENTER" minHeight="50.0" maxHeight="50.0" VBox.vgrow="ALWAYS">
+                    <HBox maxHeight="200.0" minHeight="200.0" VBox.vgrow="ALWAYS" />
+                    <HBox alignment="CENTER" maxHeight="50.0" minHeight="50.0" VBox.vgrow="ALWAYS">
+                        <children>
+                            <Label fx:id="usernameLabel" text="Username" />
+                            <TextField fx:id="usernameField" minWidth="200.0" />
+                        </children>
+                    </HBox>
+                    <HBox alignment="CENTER" maxHeight="50.0" minHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label text="Login" />
                             <TextField fx:id="loginField" minWidth="200.0" onKeyTyped="#loginFieldOnKeyTyped" />
                         </children>
                     </HBox>
-                    <HBox alignment="CENTER" minHeight="50.0" maxHeight="50.0" VBox.vgrow="ALWAYS">
+                    <HBox alignment="CENTER" maxHeight="50.0" minHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label text="Password" />
                             <PasswordField fx:id="passwordField" minWidth="200.0" onAction="#tryToAuth" />
                         </children>
                     </HBox>
                     <HBox fx:id="errorHBox" alignment="CENTER" maxHeight="50.0" VBox.vgrow="ALWAYS" />
+                    <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
+                        <children>
+                            <Button fx:id="registerBtn" mnemonicParsing="false" onAction="#showRegister" text="Register" />
+                            <Button fx:id="loginBtn" mnemonicParsing="false" onAction="#tryToAuth" text="Login" />
+                            <Button fx:id="saveUserBtn" mnemonicParsing="false" onAction="#saveUser" text="Save" />
+                        </children>
+                    </HBox>
                     <HBox minHeight="200.0" VBox.vgrow="ALWAYS" />
                 </VBox>
                 <VBox fx:id="cVBox" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">

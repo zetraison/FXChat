@@ -15,7 +15,8 @@ public enum EventEnum {
   SERVER_CLOSED("/serverclosed"),
   STICKER("/sticker"),
   USER_LOGIN("/userlogin"),
-  WHITELIST("/whitelist");
+  WHITELIST("/whitelist"),
+  CHANGE_LOGIN("/changelogin");
 
   private final String value;
 

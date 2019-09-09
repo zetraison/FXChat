@@ -1,6 +1,7 @@
 package server;
 
 import client.EventEnum;
+import server.services.AuthService;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -31,12 +32,12 @@ public class Server {
             e.printStackTrace();
         } finally {
             try {
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
-                server.close();
+                if (socket != null) {
+                    socket.close();
+                }
+                if (server != null) {
+                    server.close();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }

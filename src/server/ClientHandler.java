@@ -1,6 +1,7 @@
 package server;
 
 import client.EventEnum;
+import server.services.AuthService;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -47,7 +48,7 @@ public class ClientHandler {
                 switch (eventEnum) {
                     case AUTH: {
                         String nick = null;
-                        if (tokens.get(1) != null && tokens.get(2) != null) {
+                        if (tokens.size() == 3 && tokens.get(1) != null && tokens.get(2) != null) {
                             nick = AuthService.getNickname(tokens.get(1), tokens.get(2));
                         }
                         if (nick == null) {
@@ -65,7 +66,7 @@ public class ClientHandler {
                         continue;
                     }
                     case REGISTER: {
-                        if (tokens.get(1) != null && tokens.get(2) != null && tokens.get(3) != null) {
+                        if (tokens.size() == 4 && tokens.get(1) != null && tokens.get(2) != null && tokens.get(3) != null) {
                             String username = tokens.get(1);
                             String login = tokens.get(2);
                             String passwordHash = AuthService.MD5(tokens.get(3));
@@ -112,10 +113,18 @@ public class ClientHandler {
                         if (result) {
                             sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Remove user " + tokens.get(1) + " from blacklist");
                         } else {
-                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Error on removind user " + tokens.get(1) + " to blacklist");
+                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Error on removing user " + tokens.get(1) + " to blacklist");
                         }
                         continue;
                     }
+                    case CHANGE_LOGIN:
+                        boolean result = AuthService.changeLogin(this.getNick(), tokens.get(1));
+                        if (result) {
+                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "User " + this.getNick() + " updated login to " + tokens.get(1));
+                        } else {
+                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Error updating login to " + tokens.get(1) + " by user" + this.getNick());
+                        }
+                        continue;
                     case END: {
                         sendEvent(EventEnum.SERVER_CLOSED.getValue());
                         break;
@@ -128,15 +137,7 @@ public class ClientHandler {
         } finally {
             try {
                 in.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
                 out.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();

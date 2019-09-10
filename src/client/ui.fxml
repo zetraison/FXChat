@@ -30,24 +30,25 @@
                     <HBox alignment="CENTER" maxHeight="50.0" minHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label fx:id="usernameLabel" text="Username" />
-                            <TextField fx:id="usernameField" minWidth="200.0" />
+                            <TextField fx:id="usernameField" minWidth="200.0" onKeyTyped="#fieldOnKeyTyped" />
                         </children>
                     </HBox>
                     <HBox alignment="CENTER" maxHeight="50.0" minHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label text="Login" />
-                            <TextField fx:id="loginField" minWidth="200.0" onKeyTyped="#loginFieldOnKeyTyped" />
+                            <TextField fx:id="loginField" minWidth="200.0" onKeyTyped="#fieldOnKeyTyped" />
                         </children>
                     </HBox>
                     <HBox alignment="CENTER" maxHeight="50.0" minHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label text="Password" />
-                            <PasswordField fx:id="passwordField" minWidth="200.0" onAction="#tryToAuth" />
+                            <PasswordField fx:id="passwordField" minWidth="200.0" onAction="#tryToAuth" onKeyTyped="#fieldOnKeyTyped" />
                         </children>
                     </HBox>
                     <HBox fx:id="errorHBox" alignment="CENTER" maxHeight="50.0" VBox.vgrow="ALWAYS" />
                     <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
                         <children>
+                            <Button fx:id="cancelRegisterBtn" mnemonicParsing="false" onAction="#cancelRegister" text="Cancel" />
                             <Button fx:id="registerBtn" mnemonicParsing="false" onAction="#showRegister" text="Register" />
                             <Button fx:id="loginBtn" mnemonicParsing="false" onAction="#tryToAuth" text="Login" />
                             <Button fx:id="saveUserBtn" mnemonicParsing="false" onAction="#saveUser" text="Save" />

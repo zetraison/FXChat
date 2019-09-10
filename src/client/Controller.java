@@ -48,6 +48,7 @@ public class Controller {
     @FXML Button registerBtn;
     @FXML Button loginBtn;
     @FXML Button saveUserBtn;
+    @FXML Button cancelRegisterBtn;
     @FXML Label usernameLabel;
 
     private static final double MIN_SIDE_PANE_WIDTH = 300.0;
@@ -66,6 +67,7 @@ public class Controller {
         // Init auth form
         setAuthorized(false);
         setRegister(false);
+        cancelRegisterBtn.setVisible(false);
         // Init main form
         initStickerWidget(Utils.getStickerPackCat(), "Cat");
         initStickerWidget(Utils.getStickerPackDog(), "Dog");
@@ -210,7 +212,13 @@ public class Controller {
             text = new Text("- Send image by url:\n");
             text.setFill(Color.GREEN);
             msgFlow.getChildren().add(text);
-            text = new Text("      /image <username> <url>\n\n");
+            text = new Text("      /image <username> <url>\n");
+            text.setFill(Color.GREENYELLOW);
+            msgFlow.getChildren().add(text);
+            text = new Text("- Change your login:\n");
+            text.setFill(Color.GREEN);
+            msgFlow.getChildren().add(text);
+            text = new Text("      /changelogin <login>\n\n");
             text.setFill(Color.GREENYELLOW);
             msgFlow.getChildren().add(text);
         });
@@ -281,7 +289,6 @@ public class Controller {
             Text text = new Text(msg);
             text.setFill(Color.RED);
             errorHBox.getChildren().add(text);
-            loginField.requestFocus();
         });
     }
 
@@ -351,6 +358,11 @@ public class Controller {
                 sendEvent(EventEnum.END.getValue());
                 break;
             }
+            case CHANGE_LOGIN: {
+                String login = tokens.get(1);
+                sendEvent(EventEnum.CHANGE_LOGIN.getValue(), login);
+                break;
+            }
             default: {
                 sendEvent(EventEnum.MESSAGE.getValue(), currentUser, msgField.getText());
                 break;
@@ -368,12 +380,23 @@ public class Controller {
         if (socket == null || socket.isClosed()) {
             connect();
         }
+        if (loginField.getText().isEmpty()) {
+            showError("Login is empty!");
+            loginField.requestFocus();
+            return;
+        }
+        if (passwordField.getText().isEmpty()) {
+            showError("Password is empty!");
+            passwordField.requestFocus();
+            return;
+        }
         sendEvent(EventEnum.AUTH.getValue(), loginField.getText(), passwordField.getText());
         loginField.clear();
         passwordField.clear();
     }
 
     public void showRegister() {
+        hideError();
         setRegister(true);
     }
 
@@ -389,6 +412,7 @@ public class Controller {
             loginField.clear();
             passwordField.clear();
             usernameField.requestFocus();
+            cancelRegisterBtn.setVisible(true);
         } else {
             usernameLabel.setVisible(false);
             usernameField.setVisible(false);
@@ -399,16 +423,38 @@ public class Controller {
         }
     }
 
+    public void cancelRegister() {
+        setRegister(false);
+        hideError();
+        cancelRegisterBtn.setVisible(false);
+    }
+
     public void saveUser() {
         if (socket == null || socket.isClosed()) {
             connect();
         }
+        if (usernameField.getText().isEmpty()) {
+            showError("Username is empty!");
+            usernameField.requestFocus();
+            return;
+        }
+        if (loginField.getText().isEmpty()) {
+            showError("Login is empty!");
+            loginField.requestFocus();
+            return;
+        }
+        if (passwordField.getText().isEmpty()) {
+            showError("Password is empty!");
+            passwordField.requestFocus();
+            return;
+        }
         sendEvent(EventEnum.REGISTER.getValue(), usernameField.getText(), loginField.getText(), passwordField.getText());
         usernameField.clear();
+        cancelRegisterBtn.setVisible(false);
         setRegister(false);
     }
 
-    public void loginFieldOnKeyTyped(KeyEvent event) {
+    public void fieldOnKeyTyped(KeyEvent event) {
         hideError();
     }
 

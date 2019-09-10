@@ -1,6 +1,7 @@
 package client;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -20,8 +21,12 @@ public class Main extends Application {
         Scene scene = new Scene(root, WIDTH, HEIGHT);
         primaryStage.setScene(scene);
         primaryStage.show();
+        primaryStage.setOnCloseRequest(event -> {
+            System.out.println("Stage is closing");
+            Platform.exit();
+            System.exit(0);
+        });
     }
-
 
     public static void main(String[] args) {
         launch(args);

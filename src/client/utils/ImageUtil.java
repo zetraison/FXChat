@@ -1,11 +1,11 @@
-package client;
+package client.utils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class Utils {
+public class ImageUtil {
 
     public static List<String> getStickerPackCat() {
         List<String> urls = new ArrayList<>();
@@ -57,9 +57,5 @@ public class Utils {
         urls.add("https://www.stickpng.com/assets/thumbs/5859b19e711f64423aa5e051.png");
 
         return urls;
-    }
-
-    public static String getCurrentTime() {
-        return new SimpleDateFormat("HH:mm").format(Calendar.getInstance().getTime());
     }
 }

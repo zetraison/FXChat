@@ -1,11 +1,14 @@
 package server;
 
-import client.EventEnum;
+import client.models.Event;
+import client.models.EventType;
 import server.services.AuthService;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 
 public class Server {
@@ -45,18 +48,18 @@ public class Server {
         }
     }
 
-    public void broadcastEvent(ClientHandler from, String ... args) {
+    public void broadcastEvent(ClientHandler from, Event event) {
         for (ClientHandler client : clients) {
             if (!client.checkBlackList(from.getNick())) {
-                client.sendEvent(args);
+                client.sendEvent(event);
             }
         }
     }
 
-    public void privateEvent(String nickname, String ...args) {
+    public void privateEvent(String nickname, Event event) {
         for (ClientHandler client : clients) {
             if (client.getNick().equals(nickname)) {
-                client.sendEvent(args);
+                client.sendEvent(event);
             }
         }
     }
@@ -86,14 +89,13 @@ public class Server {
     }
 
     public void broadcastClientList() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(EventEnum.CLIENTLIST.getValue() + " ");
+        List<String> clientList = new ArrayList<>();
         for (ClientHandler client: clients) {
-            sb.append(client.getNick() + " ");
+            clientList.add(client.getNick());
         }
-        String out = sb.toString();
         for (ClientHandler client: clients) {
-            client.sendEvent(out);
+            Event event = new Event(client.getNick(), EventType.CLIENT_LIST, clientList);
+            client.sendEvent(event);
         }
     }
 }

@@ -1,5 +1,11 @@
 package client;
 
+import client.io.HistoryReader;
+import client.io.HistoryWriter;
+import client.models.EventType;
+import client.models.Event;
+import client.utils.ImageUtil;
+import client.utils.TimeUtil;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -14,16 +20,26 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import org.sqlite.util.StringUtils;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 
 public class Controller {
+    private static final double MIN_SIDE_PANE_WIDTH = 300.0;
+    private static final double MAX_SIDE_PANE_WIDTH = 300.0;
+    private static final int STICKER_ROW_LENGTH = 4;
+    private static final int STICKER_SIZE = 200;
+
+    private static final String HELP_INFO_MESSAGE = "Type /help for get more information about available service command.\n";
+    private static final String USERNAME_LOGIN_IS_EMPTY = "Login is empty!";
+    private static final String ERROR_LOGIN_IS_EMPTY = "Login is empty!";
+    private static final String ERROR_PASSWORD_IS_EMPTY = "Password is empty!";
 
     @FXML SplitPane splitPane;
     @FXML AnchorPane lPane;
@@ -51,17 +67,15 @@ public class Controller {
     @FXML Button cancelRegisterBtn;
     @FXML Label usernameLabel;
 
-    private static final double MIN_SIDE_PANE_WIDTH = 300.0;
-    private static final double MAX_SIDE_PANE_WIDTH = 300.0;
-    private static final int STICKER_ROW_LENGTH = 4;
-    private static final int STICKER_SIZE = 200;
-
     private boolean isAuthorized;
     private boolean isRegister;
     private String currentUser;
     private Socket socket;
     private DataOutputStream out;
     private DataInputStream in;
+    private HistoryReader<List<Event>> historyReader = new HistoryReader<>();
+    private HistoryWriter<List<Event>> historyWriter = new HistoryWriter<>();
+    private List<Event> events = new ArrayList<>();
 
     public void initialize() {
         // Init auth form
@@ -69,16 +83,15 @@ public class Controller {
         setRegister(false);
         cancelRegisterBtn.setVisible(false);
         // Init main form
-        initStickerWidget(Utils.getStickerPackCat(), "Cat");
-        initStickerWidget(Utils.getStickerPackDog(), "Dog");
-        initStickerWidget(Utils.getStickerPackPepe(), "Pepe");
+        initStickerWidget(ImageUtil.getStickerPackCat(), "Cat");
+        initStickerWidget(ImageUtil.getStickerPackDog(), "Dog");
+        initStickerWidget(ImageUtil.getStickerPackPepe(), "Pepe");
 
         // Set autoscrolling
         cScrollPane.vvalueProperty().bind(msgFlow.heightProperty());
 
-        Text text = new Text("Type /help for get more information about available service command.\n");
-        text.setFill(Color.GREEN);
-        msgFlow.getChildren().add(text);
+        appendText(HELP_INFO_MESSAGE, msgFlow, Color.GREEN);
+        loadHistory();
     }
 
     private void connect() {
@@ -86,10 +99,8 @@ public class Controller {
             socket = new Socket("localhost", 8082);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
-
             new Thread(this::resetSocketOnTimeout).start();
-            new Thread(this::eventLoop).start();
-
+            new Thread(this::readEvent).start();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -111,7 +122,20 @@ public class Controller {
     }
 
     /**
-     *  Available service command
+     * Send event data to socket
+     * @param event instance of Event class
+     */
+    private void sendEvent(Event event) {
+        try {
+            out.writeUTF(event.toString());
+            msgField.requestFocus();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Read event data from socket
      *
      *  /auth <login> <password>
      *  /authok <username>
@@ -122,57 +146,51 @@ public class Controller {
      *  /message <username> <message>
      *  /w <username> <message>
      */
-    private void eventLoop() {
+    private void readEvent() {
         try {
             while (true) {
-                String str = in.readUTF();
-                List<String> tokens = Arrays.asList(str.split(" "));
-                String event = tokens.get(0);
-                System.out.println("[EVENT]: " + tokens);
+                String data = in.readUTF();
+                Event event = new Event(data);
 
-                EventEnum eventEnum = EventEnum.fromValue(event);
-
-                switch (eventEnum) {
-                    case AUTH_OK: {
+                switch (event.getType()) {
+                    case AUTH_OK:
                         hideError();
                         setAuthorized(true);
-                        currentUser = tokens.get(1);
+                        currentUser = event.getAuthor();
                         continue;
-                    }
-                    case ERROR: {
-                        showError(String.join(" ", tokens.subList(1, tokens.size())));
-                        continue;
-                    }
+                    case PRIVATE_MESSAGE:
                     case MESSAGE:
-                    case PRIVATE_MESSAGE: {
-                        appendTime();
-                        appendNickname(tokens.get(1));
-                        appendMessage(String.join(" ", tokens.subList(2, tokens.size())));
+                        appendTime(event.getTime());
+                        appendNickname(event.getAuthor());
+                        appendMessage(StringUtils.join(event.getArgs(), " "));
+                        events.add(event);
+                        historyWriter.write(events);
                         continue;
-                    }
                     case STICKER: {
-                        appendTime();
-                        appendNickname(tokens.get(1));
-                        appendSticker(tokens.get(2));
+                        appendTime(event.getTime());
+                        appendNickname(event.getAuthor());
+                        appendSticker(event.getArgs().get(0));
                         continue;
                     }
                     case IMAGE: {
-                        appendTime();
-                        appendNickname(tokens.get(1));
-                        appendImage(tokens.get(2));
+                        appendTime(event.getTime());
+                        appendNickname(event.getAuthor());
+                        appendImage(event.getArgs().get(0));
                         continue;
                     }
                     case HELP: {
                         appendHelpInfo();
                         continue;
                     }
-                    case CLIENTLIST: {
-                        appendUsers(tokens.subList(1, tokens.size()));
+                    case CLIENT_LIST: {
+                        appendUsers(event.getArgs());
                         continue;
                     }
-                    case SERVER_CLOSED: {
+                    default:
+                        continue;
+                    case SERVER_CLOSED:
+                    case END:
                         break;
-                    }
                 }
             }
         } catch (IOException e) {
@@ -186,66 +204,85 @@ public class Controller {
         }
     }
 
-    private void appendHelpInfo() {
+    public void sendMsg() {
+        String text = msgField.getText();
+        if (text.isEmpty())
+            return;
+        Event event = new Event(currentUser, text);
+        sendEvent(event);
+        msgField.clear();
+        msgField.requestFocus();
+    }
+
+    /**
+     * Deserialize user message history form text file
+     */
+    private void loadHistory() {
+        try {
+            List<Event> events = historyReader.read();
+            if (events == null) {
+                return;
+            }
+            this.events = events;
+            for (Event event: events) {
+                if (
+                        event.getType() == EventType.MESSAGE ||
+                        event.getType() == EventType.PRIVATE_MESSAGE ||
+                        event.getType() == EventType.IMAGE ||
+                        event.getType() == EventType.STICKER
+                ) {
+                    appendTime(event.getTime());
+                    appendNickname(event.getAuthor());
+                }
+                if (event.getType() == EventType.MESSAGE || event.getType() == EventType.PRIVATE_MESSAGE) {
+                    appendMessage(StringUtils.join(event.getArgs(), " "));
+                }
+                if (event.getType() == EventType.IMAGE) {
+                    appendImage(event.getArgs().get(0));
+                }
+                if (event.getType() == EventType.STICKER) {
+                    appendSticker(event.getArgs().get(0));
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void appendText(String msg, TextFlow parent, Color color) {
         Platform.runLater(() -> {
-            Text text = new Text("\nAvailable service command list:\n\n");
-            text.setFill(Color.GREEN);
-            msgFlow.getChildren().add(text);
-            text = new Text("- Send private message:\n");
-            text.setFill(Color.GREEN);
-            msgFlow.getChildren().add(text);
-            text = new Text("      /w <username> <message>\n");
-            text.setFill(Color.GREENYELLOW);
-            msgFlow.getChildren().add(text);
-            text = new Text("- Add user to blacklist:\n");
-            text.setFill(Color.GREEN);
-            msgFlow.getChildren().add(text);
-            text = new Text("      /blacklist <username> \n");
-            text.setFill(Color.GREENYELLOW);
-            msgFlow.getChildren().add(text);
-            text = new Text("- Remove user from blacklist:\n");
-            text.setFill(Color.GREEN);
-            msgFlow.getChildren().add(text);
-            text = new Text("      /whitelist <username> \n");
-            text.setFill(Color.GREENYELLOW);
-            msgFlow.getChildren().add(text);
-            text = new Text("- Send image by url:\n");
-            text.setFill(Color.GREEN);
-            msgFlow.getChildren().add(text);
-            text = new Text("      /image <username> <url>\n");
-            text.setFill(Color.GREENYELLOW);
-            msgFlow.getChildren().add(text);
-            text = new Text("- Change your login:\n");
-            text.setFill(Color.GREEN);
-            msgFlow.getChildren().add(text);
-            text = new Text("      /changelogin <login>\n\n");
-            text.setFill(Color.GREENYELLOW);
-            msgFlow.getChildren().add(text);
+            Text text = new Text(msg + " ");
+            text.setFill(color);
+            parent.getChildren().add(text);
         });
     }
 
-    private void appendTime() {
+    private void appendHelpInfo() {
         Platform.runLater(() -> {
-            Text time = new Text(Utils.getCurrentTime() + " ");
-            time.setFill(Color.GREY);
-            msgFlow.getChildren().add(time);
+            appendText("\nAvailable service command list:\n", msgFlow, Color.GREEN);
+            appendText("- Send private message:\n", msgFlow, Color.GREEN);
+            appendText("    /w <username> <message>\n", msgFlow, Color.GREENYELLOW);
+            appendText("- Add user to blacklist:\n", msgFlow, Color.GREEN);
+            appendText("    /blacklist <username> \n", msgFlow, Color.GREENYELLOW);
+            appendText("- Remove user from blacklist:\n", msgFlow, Color.GREEN);
+            appendText("    /whitelist <username> \n", msgFlow, Color.GREENYELLOW);
+            appendText("- Send image by url:\n", msgFlow, Color.GREEN);
+            appendText("    /image <username> <url>\n", msgFlow, Color.GREENYELLOW);
+            appendText("- Change your login:\n", msgFlow, Color.GREEN);
+            appendText("    /changelogin <login>\n\n", msgFlow, Color.GREENYELLOW);
         });
+    }
+
+    private void appendTime(String time) {
+        Platform.runLater(() -> appendText(time, msgFlow, Color.GREY));
     }
 
     private void appendNickname(String nickname) {
-        Platform.runLater(() -> {
-            Text time = new Text(nickname + " ");
-            time.setFill(Color.GOLD);
-            msgFlow.getChildren().add(time);
-        });
+        Platform.runLater(() -> appendText(nickname, msgFlow, Color.GOLD));
     }
 
     private void appendMessage(String msg) {
-        Platform.runLater(() -> {
-            Text text = new Text(msg + "\n");
-            text.setFill(Color.GHOSTWHITE);
-            msgFlow.getChildren().add(text);
-        });
+        Platform.runLater(() -> appendText(msg + "\n", msgFlow, Color.GHOSTWHITE));
     }
 
     private void appendUsers(List<String> users) {
@@ -313,86 +350,61 @@ public class Controller {
         }
     }
 
-    private void sendEvent(String ...args) {
-        try {
-            out.writeUTF(String.join(" ", Arrays.asList(args)));
-            msgField.requestFocus();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void sendMsg() {
-        if (msgField.getText().isEmpty())
-            return;
-
-        List<String> tokens = Arrays.asList(msgField.getText().split(" "));
-        switch (EventEnum.fromValue(tokens.get(0))) {
-            case PRIVATE_MESSAGE: {
-                String toUser = tokens.get(1);
-                String message = String.join(" ", tokens.subList(2, tokens.size()));
-                sendEvent(EventEnum.PRIVATE_MESSAGE.getValue(), toUser, currentUser, message);
-                break;
-            }
-            case BLACKLIST: {
-                String toUser = tokens.get(1);
-                sendEvent(EventEnum.BLACKLIST.getValue(), toUser);
-                break;
-            }
-            case WHITELIST: {
-                String toUser = tokens.get(1);
-                sendEvent(EventEnum.WHITELIST.getValue(), toUser);
-                break;
-            }
-            case HELP: {
-                sendEvent(EventEnum.HELP.getValue());
-                break;
-            }
-            case IMAGE: {
-                String toUser = tokens.get(1);
-                String url = tokens.get(2);
-                sendEvent(EventEnum.IMAGE.getValue(), toUser, url);
-                break;
-            }
-            case END: {
-                sendEvent(EventEnum.END.getValue());
-                break;
-            }
-            case CHANGE_LOGIN: {
-                String login = tokens.get(1);
-                sendEvent(EventEnum.CHANGE_LOGIN.getValue(), login);
-                break;
-            }
-            default: {
-                sendEvent(EventEnum.MESSAGE.getValue(), currentUser, msgField.getText());
-                break;
-            }
-        }
-        msgField.clear();
-        msgField.requestFocus();
-    }
-
     private void sendSticker(String url) {
-        sendEvent(EventEnum.STICKER.getValue(), currentUser, url);
+        Event event = new Event(currentUser, EventType.STICKER, Collections.singletonList(url));
+        sendEvent(event);
     }
 
-    public void tryToAuth() {
+    private void checkSocket() {
         if (socket == null || socket.isClosed()) {
             connect();
         }
+    }
+
+    public void authUser() {
+        checkSocket();
         if (loginField.getText().isEmpty()) {
-            showError("Login is empty!");
+            showError(ERROR_LOGIN_IS_EMPTY);
             loginField.requestFocus();
             return;
         }
         if (passwordField.getText().isEmpty()) {
-            showError("Password is empty!");
+            showError(ERROR_PASSWORD_IS_EMPTY);
             passwordField.requestFocus();
             return;
         }
-        sendEvent(EventEnum.AUTH.getValue(), loginField.getText(), passwordField.getText());
+        Event event = new Event(currentUser, EventType.AUTH, Arrays.asList(loginField.getText(), passwordField.getText()));
+        sendEvent(event);
         loginField.clear();
         passwordField.clear();
+    }
+
+    public void saveUser() {
+        checkSocket();
+        if (usernameField.getText().isEmpty()) {
+            showError(USERNAME_LOGIN_IS_EMPTY);
+            usernameField.requestFocus();
+            return;
+        }
+        if (loginField.getText().isEmpty()) {
+            showError(ERROR_LOGIN_IS_EMPTY);
+            loginField.requestFocus();
+            return;
+        }
+        if (passwordField.getText().isEmpty()) {
+            showError(ERROR_PASSWORD_IS_EMPTY);
+            passwordField.requestFocus();
+            return;
+        }
+        Event event = new Event(
+                currentUser,
+                EventType.REGISTER,
+                Arrays.asList(usernameField.getText(), loginField.getText(), passwordField.getText())
+        );
+        sendEvent(event);
+        usernameField.clear();
+        cancelRegisterBtn.setVisible(false);
+        setRegister(false);
     }
 
     public void showRegister() {
@@ -400,7 +412,7 @@ public class Controller {
         setRegister(true);
     }
 
-    public void setRegister(boolean isRegister) {
+    private void setRegister(boolean isRegister) {
         this.isRegister = isRegister;
         if (isRegister) {
             usernameLabel.setVisible(true);
@@ -427,31 +439,6 @@ public class Controller {
         setRegister(false);
         hideError();
         cancelRegisterBtn.setVisible(false);
-    }
-
-    public void saveUser() {
-        if (socket == null || socket.isClosed()) {
-            connect();
-        }
-        if (usernameField.getText().isEmpty()) {
-            showError("Username is empty!");
-            usernameField.requestFocus();
-            return;
-        }
-        if (loginField.getText().isEmpty()) {
-            showError("Login is empty!");
-            loginField.requestFocus();
-            return;
-        }
-        if (passwordField.getText().isEmpty()) {
-            showError("Password is empty!");
-            passwordField.requestFocus();
-            return;
-        }
-        sendEvent(EventEnum.REGISTER.getValue(), usernameField.getText(), loginField.getText(), passwordField.getText());
-        usernameField.clear();
-        cancelRegisterBtn.setVisible(false);
-        setRegister(false);
     }
 
     public void fieldOnKeyTyped(KeyEvent event) {

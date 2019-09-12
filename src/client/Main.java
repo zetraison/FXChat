@@ -14,7 +14,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        Parent root = FXMLLoader.load(getClass().getResource("ui.fxml"));
+        Parent root = FXMLLoader.load(getClass().getResource("resources/ui.fxml"));
         primaryStage.setTitle("FXChat");
         primaryStage.setMinWidth(WIDTH);
         primaryStage.setMinHeight(HEIGHT);

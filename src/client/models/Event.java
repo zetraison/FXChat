@@ -15,14 +15,14 @@ public class Event implements Serializable {
     private String author;
     private List<String> args;
 
-    public Event(@NotNull String author, @NotNull EventType type, List<String> args) {
+    public Event(String author, @NotNull EventType type, List<String> args) {
         this.author = author != null ? author : "Guest";
         this.type = type;
         this.args = args;
         this.time = TimeUtil.getCurrentTime();
     }
 
-    public Event(@NotNull String author, @NotNull String text) {
+    public Event(String author, @NotNull String text) {
         List<String> tokens = Arrays.asList(text.split(" "));
         this.type = EventType.fromValue(tokens.get(0));
         if (this.type == EventType.MESSAGE) {

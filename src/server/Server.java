@@ -7,9 +7,7 @@ import server.services.AuthService;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
 public class Server {
 
@@ -68,6 +66,17 @@ public class Server {
         System.out.println("Client authorized " + clientHandler.getNick());
         clients.add(clientHandler);
         broadcastClientList();
+        if (AuthService.getIsAdmin(clientHandler.getNick())) {
+            broadcastForbiddenList();
+        }
+        if (AuthService.getIsBlocked(clientHandler.getNick())) {
+            broadcastUserBlocked(clientHandler.getNick());
+        }
+    }
+
+    public void blockUser(String user) {
+        AuthService.blockUser(user);
+        broadcastUserBlocked(user);
     }
 
     public void unsubscribe(ClientHandler clientHandler) {
@@ -96,6 +105,24 @@ public class Server {
         for (ClientHandler client: clients) {
             Event event = new Event(client.getNick(), EventType.CLIENT_LIST, clientList);
             client.sendEvent(event);
+        }
+    }
+
+    public void broadcastForbiddenList() {
+        List<String> blockedUsers = AuthService.getBlockedUsers();
+        blockedUsers.add(0, "Blocked users: ");
+        for (ClientHandler client: clients) {
+            if (client.isAdmin()) {
+                client.sendEvent(new Event(client.getNick(), EventType.MESSAGE, blockedUsers));
+            }
+        }
+    }
+
+    public void broadcastUserBlocked(String user) {
+        for (ClientHandler client: clients) {
+            if (client.getNick().equals(user)) {
+                client.sendEvent(new Event(client.getNick(), EventType.USER_BLOCKED, Collections.singletonList(user)));
+            }
         }
     }
 }

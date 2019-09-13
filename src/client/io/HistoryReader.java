@@ -1,15 +1,17 @@
 package client.io;
 
+import client.ConfigLoader;
+
 import java.io.*;
 
 public class HistoryReader<T> {
-    private String filePath = "C:\\Users\\MiNotebook\\IdeaProjects\\FXChat\\src\\client\\resources\\history.txt";
+    String filePath = ConfigLoader.load().getProperty("history.filepath");
 
     public T read() throws IOException, ClassNotFoundException {
         ObjectInputStream ois = null;;
         T result = null;
         try {
-            FileInputStream fin = new FileInputStream(this.filePath);;
+            FileInputStream fin = new FileInputStream(filePath);
             ois = new ObjectInputStream(fin);;
             result = (T) ois.readObject();
         } catch (EOFException e) {
@@ -28,7 +30,7 @@ public class HistoryReader<T> {
     private void createFile() throws IOException {
         BufferedWriter output = null;
         try {
-            File file = new File(this.filePath);
+            File file = new File(filePath);
             output = new BufferedWriter(new FileWriter(file));
         } finally {
             System.out.println("History file is created");

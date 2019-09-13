@@ -1,5 +1,6 @@
 package server;
 
+import client.models.Censor;
 import client.models.Event;
 import client.models.EventType;
 import server.services.AuthService;
@@ -19,7 +20,9 @@ public class ClientHandler {
     private DataInputStream in;
     private Server server;
     private String nick;
+    private Boolean admin = false;
     private ArrayList<String> blackList;
+    private Censor censor = new Censor();
 
     private final static String ERROR_INCORRECT_USERNAME_LOGIN_PASSWORD = "Incorrect username/logo/pass!";
     private final static String ERROR_INCORRECT_LOGIN_PASSWORD = "Incorrect logo/pass!";
@@ -54,6 +57,7 @@ public class ClientHandler {
                             String login = event.getArgs().get(0);
                             String password = event.getArgs().get(1);
                             nick = AuthService.getNickname(login, password);
+                            admin = AuthService.getIsAdmin(nick);
                         }
                         if (nick == null) {
                             sendEvent(new Event(
@@ -105,6 +109,10 @@ public class ClientHandler {
                         continue;
                     }
                     case MESSAGE:
+                        Boolean isDangerUser = censor.checkMessage(event.getAuthor(), event.getArgs());
+                        if (isDangerUser) {
+                            server.blockUser(event.getAuthor());
+                        }
                     case STICKER:
                     case IMAGE: {
                         server.broadcastEvent(this, event);
@@ -150,6 +158,11 @@ public class ClientHandler {
                                 )
                         );
                         continue;
+                    case USER_BLOCKED:
+                        String user = event.getArgs().get(0);
+                        sendEvent(new Event(this.getNick(), EventType.USER_BLOCKED, Collections.singletonList(user)));
+                        server.blockUser(user);
+                        continue;
                     case END: {
                         sendEvent(new Event(this.getNick(), EventType.SERVER_CLOSED, null));
                         break;
@@ -181,6 +194,10 @@ public class ClientHandler {
 
     public String getNick() {
         return nick;
+    }
+
+    public Boolean isAdmin() {
+        return admin;
     }
 
     public boolean checkBlackList(String nick) {

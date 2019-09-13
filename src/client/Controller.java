@@ -2,10 +2,10 @@ package client;
 
 import client.io.HistoryReader;
 import client.io.HistoryWriter;
-import client.models.EventType;
+import client.models.Censor;
 import client.models.Event;
+import client.models.EventType;
 import client.utils.ImageUtil;
-import client.utils.TimeUtil;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -21,13 +21,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import org.sqlite.util.StringUtils;
+import server.services.AuthService;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 
 public class Controller {
@@ -69,6 +69,7 @@ public class Controller {
 
     private boolean isAuthorized;
     private boolean isRegister;
+    private boolean isBlocked;
     private String currentUser;
     private Socket socket;
     private DataOutputStream out;
@@ -141,6 +142,10 @@ public class Controller {
         if (text.isEmpty())
             return;
         Event event = new Event(currentUser, text);
+        if (isBlocked) {
+            appendMessage(new Event(event.getAuthor(), EventType.ERROR, Collections.singletonList("You are blocked")));
+            return;
+        }
         sendEvent(event);
         msgField.clear();
         msgField.requestFocus();
@@ -189,6 +194,9 @@ public class Controller {
                         appendUsers(event.getArgs());
                         continue;
                     }
+                    case USER_BLOCKED:
+                        isBlocked = true;
+                        continue;
                     default:
                         continue;
                     case SERVER_CLOSED:

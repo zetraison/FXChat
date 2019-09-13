@@ -1,14 +1,17 @@
 package client.io;
 
+import client.ConfigLoader;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
 public class HistoryWriter<T> {
-    private String filePath = "C:\\Users\\MiNotebook\\IdeaProjects\\FXChat\\src\\client\\resources\\history.txt";
+
+    String filePath = ConfigLoader.load().getProperty("history.filepath");
 
     public void write(T obj) throws IOException {
-        FileOutputStream fout = new FileOutputStream(this.filePath);
+        FileOutputStream fout = new FileOutputStream(filePath);
         ObjectOutputStream oos = new ObjectOutputStream(fout);
         oos.writeObject(obj);
         oos.close();

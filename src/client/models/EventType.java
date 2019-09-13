@@ -16,6 +16,7 @@ public enum EventType {
     SERVER_CLOSED("/serverclosed"),
     STICKER("/sticker"),
     USER_LOGIN("/userlogin"),
+    USER_BLOCKED("/userblocked"),
     WHITELIST("/whitelist");
 
     private final String value;

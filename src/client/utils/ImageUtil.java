@@ -10,6 +10,7 @@ public class ImageUtil {
     public static List<String> getStickerPackCat() {
         List<String> urls = new ArrayList<>();
 
+        urls.add("https://www.freelogodesign.org/Content/img/logo-samples/bakary.png");
         urls.add("https://www.stickpng.com/assets/thumbs/5845e10e7733c3558233c0ea.png");
         urls.add("https://www.stickpng.com/assets/thumbs/5845e1677733c3558233c0ee.png");
         urls.add("https://www.stickpng.com/assets/thumbs/5845e13e7733c3558233c0ec.png");

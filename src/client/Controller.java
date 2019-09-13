@@ -128,10 +128,22 @@ public class Controller {
     private void sendEvent(Event event) {
         try {
             out.writeUTF(event.toString());
-            msgField.requestFocus();
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Send message from text field
+     */
+    public void sendMsg() {
+        String text = msgField.getText();
+        if (text.isEmpty())
+            return;
+        Event event = new Event(currentUser, text);
+        sendEvent(event);
+        msgField.clear();
+        msgField.requestFocus();
     }
 
     /**
@@ -151,6 +163,8 @@ public class Controller {
             while (true) {
                 String data = in.readUTF();
                 Event event = new Event(data);
+                events.add(event);
+                historyWriter.write(events);
 
                 switch (event.getType()) {
                     case AUTH_OK:
@@ -160,22 +174,11 @@ public class Controller {
                         continue;
                     case PRIVATE_MESSAGE:
                     case MESSAGE:
-                        appendTime(event.getTime());
-                        appendNickname(event.getAuthor());
-                        appendMessage(StringUtils.join(event.getArgs(), " "));
-                        events.add(event);
-                        historyWriter.write(events);
+                        appendMessage(event);
                         continue;
-                    case STICKER: {
-                        appendTime(event.getTime());
-                        appendNickname(event.getAuthor());
-                        appendSticker(event.getArgs().get(0));
-                        continue;
-                    }
+                    case STICKER:
                     case IMAGE: {
-                        appendTime(event.getTime());
-                        appendNickname(event.getAuthor());
-                        appendImage(event.getArgs().get(0));
+                        appendImage(event);
                         continue;
                     }
                     case HELP: {
@@ -204,16 +207,6 @@ public class Controller {
         }
     }
 
-    public void sendMsg() {
-        String text = msgField.getText();
-        if (text.isEmpty())
-            return;
-        Event event = new Event(currentUser, text);
-        sendEvent(event);
-        msgField.clear();
-        msgField.requestFocus();
-    }
-
     /**
      * Deserialize user message history form text file
      */
@@ -225,23 +218,11 @@ public class Controller {
             }
             this.events = events;
             for (Event event: events) {
-                if (
-                        event.getType() == EventType.MESSAGE ||
-                        event.getType() == EventType.PRIVATE_MESSAGE ||
-                        event.getType() == EventType.IMAGE ||
-                        event.getType() == EventType.STICKER
-                ) {
-                    appendTime(event.getTime());
-                    appendNickname(event.getAuthor());
-                }
                 if (event.getType() == EventType.MESSAGE || event.getType() == EventType.PRIVATE_MESSAGE) {
-                    appendMessage(StringUtils.join(event.getArgs(), " "));
+                    appendMessage(event);
                 }
-                if (event.getType() == EventType.IMAGE) {
-                    appendImage(event.getArgs().get(0));
-                }
-                if (event.getType() == EventType.STICKER) {
-                    appendSticker(event.getArgs().get(0));
+                if (event.getType() == EventType.IMAGE || event.getType() == EventType.STICKER) {
+                    appendImage(event);
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -250,11 +231,9 @@ public class Controller {
     }
 
     private void appendText(String msg, TextFlow parent, Color color) {
-        Platform.runLater(() -> {
-            Text text = new Text(msg + " ");
-            text.setFill(color);
-            parent.getChildren().add(text);
-        });
+        Text text = new Text(msg + " ");
+        text.setFill(color);
+        parent.getChildren().add(text);
     }
 
     private void appendHelpInfo() {
@@ -273,16 +252,27 @@ public class Controller {
         });
     }
 
-    private void appendTime(String time) {
-        Platform.runLater(() -> appendText(time, msgFlow, Color.GREY));
+    private void appendMessage(Event event) {
+        String message = StringUtils.join(event.getArgs(), " ") + "\n";
+        Platform.runLater(() -> {
+            appendText(event.getTime(), msgFlow, Color.GREY);
+            appendText(event.getAuthor(), msgFlow, Color.YELLOW);
+            appendText(message, msgFlow, Color.GHOSTWHITE);
+        });
     }
 
-    private void appendNickname(String nickname) {
-        Platform.runLater(() -> appendText(nickname, msgFlow, Color.GOLD));
-    }
+    private void appendImage(Event event) {
+        Platform.runLater(() -> {
+            String url = event.getArgs().get(0);
+            Image image = new Image(url, true);
+            ImageView imageView = new ImageView(image);
 
-    private void appendMessage(String msg) {
-        Platform.runLater(() -> appendText(msg + "\n", msgFlow, Color.GHOSTWHITE));
+            appendText(event.getTime(), msgFlow, Color.GREY);
+            appendText(event.getAuthor(), msgFlow, Color.YELLOW);
+            appendText("\n", msgFlow, Color.TRANSPARENT);
+            msgFlow.getChildren().add(imageView);
+            appendText("\n\n\n", msgFlow, Color.TRANSPARENT);
+        });
     }
 
     private void appendUsers(List<String> users) {
@@ -291,32 +281,6 @@ public class Controller {
             for (String user: users) {
                 lVBox.getChildren().add(new Label(user + (user.equals(currentUser) ? " (you)" : "")));
             }
-        });
-    }
-
-    private void appendSticker(String url) {
-        Platform.runLater(() -> {
-            Image image = new Image(url, true);
-
-            ImageView imageView = new ImageView(image);
-            imageView.setFitHeight(STICKER_SIZE);
-            imageView.setFitWidth(STICKER_SIZE);
-
-            msgFlow.getChildren().add(new Text("\n"));
-            msgFlow.getChildren().add(imageView);
-            msgFlow.getChildren().add(new Text("\n\n\n"));
-        });
-    }
-
-    private void appendImage(String url) {
-        Platform.runLater(() -> {
-            Image image = new Image(url, true);
-
-            ImageView imageView = new ImageView(image);
-
-            msgFlow.getChildren().add(new Text("\n"));
-            msgFlow.getChildren().add(imageView);
-            msgFlow.getChildren().add(new Text("\n\n\n"));
         });
     }
 

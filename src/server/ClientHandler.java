@@ -21,6 +21,10 @@ public class ClientHandler {
     private String nick;
     private ArrayList<String> blackList;
 
+    private final static String ERROR_INCORRECT_USERNAME_LOGIN_PASSWORD = "Incorrect username/logo/pass!";
+    private final static String ERROR_INCORRECT_LOGIN_PASSWORD = "Incorrect logo/pass!";
+    private final static String ERROR_ACCOUNT_ALREADY_USED = "Account already used!";
+
     public ClientHandler(Server server, Socket socket) {
         try {
             this.socket = socket;
@@ -47,22 +51,27 @@ public class ClientHandler {
                     case AUTH: {
                         String nick = null;
                         if (event.getArgs().size() == 2 && event.getArgs().get(0) != null && event.getArgs().get(1) != null) {
-                            nick = AuthService.getNickname(event.getArgs().get(0), event.getArgs().get(1));
+                            String login = event.getArgs().get(0);
+                            String password = event.getArgs().get(1);
+                            nick = AuthService.getNickname(login, password);
                         }
                         if (nick == null) {
-                            Event errorEvent = new Event(nick, EventType.ERROR, Collections.singletonList("Incorrect logo/pass!"));
-                            sendEvent(errorEvent);
+                            sendEvent(new Event(
+                                    nick,
+                                    EventType.ERROR,
+                                    Collections.singletonList(ERROR_INCORRECT_LOGIN_PASSWORD)));
                             continue;
                         }
                         if (server.isNickBusy(nick)) {
-                            Event errorEvent = new Event(nick, EventType.ERROR, Collections.singletonList("Account already used!"));
-                            sendEvent(errorEvent);
+                            sendEvent(new Event(
+                                    nick,
+                                    EventType.ERROR,
+                                    Collections.singletonList(ERROR_ACCOUNT_ALREADY_USED)));
                             continue;
                         }
                         this.nick = nick;
                         this.blackList = AuthService.getUserBlacklist(nick);
-                        Event authOkEvent = new Event(nick, EventType.AUTH_OK, Collections.singletonList(nick));
-                        sendEvent(authOkEvent);
+                        sendEvent(new Event(nick, EventType.AUTH_OK, Collections.singletonList(nick)));
                         server.subscribe(ClientHandler.this);
                         continue;
                     }
@@ -79,18 +88,20 @@ public class ClientHandler {
 
                             AuthService.addUser(username, login, passwordHash);
                         } else {
-                            Event errorEvent = new Event(nick, EventType.ERROR, Collections.singletonList("Incorrect username/logo/pass!"));
-                            sendEvent(errorEvent);
+                            sendEvent(new Event(
+                                    nick,
+                                    EventType.ERROR,
+                                    Collections.singletonList(ERROR_INCORRECT_USERNAME_LOGIN_PASSWORD)));
                         }
                         continue;
                     }
                     case HELP: {
-                        Event errorEvent = new Event(nick, EventType.HELP, null);
-                        sendEvent(errorEvent);
+                        sendEvent(new Event(nick, EventType.HELP, null));
                         continue;
                     }
                     case PRIVATE_MESSAGE: {
-                        server.privateEvent(event.getArgs().get(0), event);
+                        String toUser = event.getArgs().get(0);
+                        server.privateEvent(toUser, event);
                         continue;
                     }
                     case MESSAGE:
@@ -100,42 +111,47 @@ public class ClientHandler {
                         continue;
                     }
                     case BLACKLIST: {
-                        boolean result = AuthService.addToBlacklist(this.getNick(), event.getArgs().get(0));
+                        String user = event.getArgs().get(0);
+                        boolean result = AuthService.addToBlacklist(this.getNick(), user);
                         this.blackList = AuthService.getUserBlacklist(nick);
-                        if (result) {
-                            Event event1 = new Event(this.getNick(), EventType.MESSAGE, Arrays.asList(this.nick, "Add user " + event.getArgs().get(0) + " to blacklist"));
-                            sendEvent(event1);
-                        } else {
-                            Event event1 = new Event(this.getNick(), EventType.MESSAGE,Arrays.asList(this.nick, "Error on adding user " +  event.getArgs().get(0) + " to blacklist"));
-                            sendEvent(event1);
-                        }
+                        sendEvent(new Event(
+                                this.getNick(),
+                                EventType.MESSAGE,
+                                result
+                                        ? Arrays.asList(this.nick, "Add user " + user + " to blacklist")
+                                        : Arrays.asList(this.nick, "Error on adding user " +  user + " to blacklist")
+                                )
+                        );
                         continue;
                     }
                     case WHITELIST: {
-                        boolean result = AuthService.removeFromBlacklist(this.getNick(),  event.getArgs().get(0));
+                        String user = event.getArgs().get(0);
+                        boolean result = AuthService.removeFromBlacklist(this.getNick(),  user);
                         this.blackList = AuthService.getUserBlacklist(nick);
-                        if (result) {
-                            Event event1 = new Event(this.getNick(), EventType.MESSAGE, Arrays.asList(this.nick, "Remove user " +  event.getArgs().get(0) + " from blacklist"));
-                            sendEvent(event1);
-                        } else {
-                            Event event1 = new Event(this.getNick(), EventType.MESSAGE, Arrays.asList(this.nick, "Error on removing user " +  event.getArgs().get(0) + " to blacklist"));
-                            sendEvent(event1);
-                        }
+                        sendEvent(new Event(
+                                this.getNick(),
+                                EventType.MESSAGE,
+                                result
+                                        ? Arrays.asList(this.nick, "Remove user " +  user + " from blacklist")
+                                        : Arrays.asList(this.nick, "Error on removing user " +  user + " to blacklist")
+                                )
+                        );
                         continue;
                     }
                     case CHANGE_LOGIN:
-                        boolean result = AuthService.changeLogin(this.getNick(), event.getArgs().get(0));
-                        if (result) {
-                            Event event1 = new Event(this.getNick(), EventType.MESSAGE, Collections.singletonList("User " + this.getNick() + " updated login to " + event.getArgs().get(0)));
-                            sendEvent(event1);
-                        } else {
-                            Event event1 = new Event(this.getNick(), EventType.MESSAGE, Collections.singletonList("Error updating login to " + event.getArgs().get(0) + " by user" + this.getNick()));
-                            sendEvent(event1);
-                        }
+                        String login = event.getArgs().get(0);
+                        boolean result = AuthService.changeLogin(this.getNick(), login);
+                        sendEvent(new Event(
+                                this.getNick(),
+                                EventType.MESSAGE,
+                                result
+                                        ? Collections.singletonList("User " + this.getNick() + " updated login to " + login)
+                                        : Collections.singletonList("Error updating login to " + login + " by user" + this.getNick())
+                                )
+                        );
                         continue;
                     case END: {
-                        Event serverCloseEvent = new Event(this.getNick(), EventType.SERVER_CLOSED, null);
-                        sendEvent(serverCloseEvent);
+                        sendEvent(new Event(this.getNick(), EventType.SERVER_CLOSED, null));
                         break;
                     }
                 }

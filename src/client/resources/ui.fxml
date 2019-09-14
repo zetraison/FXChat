@@ -42,7 +42,7 @@
                     <HBox alignment="CENTER" maxHeight="50.0" minHeight="50.0" VBox.vgrow="ALWAYS">
                         <children>
                             <Label text="Password" />
-                            <PasswordField fx:id="passwordField" minWidth="200.0" onAction="#tryToAuth" onKeyTyped="#fieldOnKeyTyped" />
+                            <PasswordField fx:id="passwordField" minWidth="200.0" onAction="#authUser" onKeyTyped="#fieldOnKeyTyped" />
                         </children>
                     </HBox>
                     <HBox fx:id="errorHBox" alignment="CENTER" maxHeight="50.0" VBox.vgrow="ALWAYS" />
@@ -50,7 +50,7 @@
                         <children>
                             <Button fx:id="cancelRegisterBtn" mnemonicParsing="false" onAction="#cancelRegister" text="Cancel" />
                             <Button fx:id="registerBtn" mnemonicParsing="false" onAction="#showRegister" text="Register" />
-                            <Button fx:id="loginBtn" mnemonicParsing="false" onAction="#tryToAuth" text="Login" />
+                            <Button fx:id="loginBtn" mnemonicParsing="false" onAction="#authUser" text="Login" />
                             <Button fx:id="saveUserBtn" mnemonicParsing="false" onAction="#saveUser" text="Save" />
                         </children>
                     </HBox>
@@ -81,6 +81,6 @@
             </children></AnchorPane>
     </items>
     <stylesheets>
-        <URL value="@/client/css/style.css" />
+        <URL value="@/client/resources/css/style.css" />
     </stylesheets>
 </SplitPane>

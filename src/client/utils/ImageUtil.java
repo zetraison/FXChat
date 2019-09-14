@@ -1,15 +1,16 @@
-package client;
+package client.utils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class Utils {
+public class ImageUtil {
 
     public static List<String> getStickerPackCat() {
         List<String> urls = new ArrayList<>();
 
+        urls.add("https://www.freelogodesign.org/Content/img/logo-samples/bakary.png");
         urls.add("https://www.stickpng.com/assets/thumbs/5845e10e7733c3558233c0ea.png");
         urls.add("https://www.stickpng.com/assets/thumbs/5845e1677733c3558233c0ee.png");
         urls.add("https://www.stickpng.com/assets/thumbs/5845e13e7733c3558233c0ec.png");
@@ -57,9 +58,5 @@ public class Utils {
         urls.add("https://www.stickpng.com/assets/thumbs/5859b19e711f64423aa5e051.png");
 
         return urls;
-    }
-
-    public static String getCurrentTime() {
-        return new SimpleDateFormat("HH:mm").format(Calendar.getInstance().getTime());
     }
 }

@@ -40,6 +40,32 @@ public class AuthService {
         return null;
     }
 
+    public static Boolean getIsAdmin(String username) {
+        String query = String.format("select admin from user where username = '%s'", username);
+        try {
+            ResultSet rs = stmt.executeQuery(query);
+            if (rs.next()) {
+                return Integer.parseInt(rs.getString(1)) == 1;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static Boolean getIsBlocked(String username) {
+        String query = String.format("select blocked from user where username = '%s'", username);
+        try {
+            ResultSet rs = stmt.executeQuery(query);
+            if (rs.next()) {
+                return Integer.parseInt(rs.getString(1)) == 1;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     private static Integer getUserIdByNickname(String username) {
         String query = String.format("select id from user where username = '%s'", username);
         try {
@@ -68,12 +94,13 @@ public class AuthService {
     }
 
     public static void addUser(String username, String login, String passwordHash) {
-        String query = "insert into user (username, login, password_hash) values (?, ?, ?)";
+        String query = "insert into user (username, login, password_hash, admin) values (?, ?, ?, ?)";
         try {
             PreparedStatement stmt = connection.prepareStatement(query);
             stmt.setString(1, username);
             stmt.setString(2, login);
             stmt.setString(3, passwordHash);
+            stmt.setString(4, "0");
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -102,6 +129,27 @@ public class AuthService {
                 blockedUsernames.add(rs.getString(1));
             }
             return blockedUsernames;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                stmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    public static ArrayList<String> getBlockedUsers() {
+        ArrayList<String> blockedUsers = new ArrayList<>();
+        String query = "select username from user where blocked = 1";
+        try {
+            ResultSet rs = stmt.executeQuery(query);
+            while (rs.next()) {
+                blockedUsers.add(rs.getString(1));
+            }
+            return blockedUsers;
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -186,5 +234,27 @@ public class AuthService {
             return true;
         }
         return false;
+    }
+
+    public static void blockUser(String username) {
+        Integer userId = getUserIdByNickname(username);
+
+        if (userId != null) {
+            String query = "update user set blocked = ? where id = ?";
+            try {
+                PreparedStatement stmt = connection.prepareStatement(query);
+                stmt.setString(1, "1");
+                stmt.setInt(2, userId);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }

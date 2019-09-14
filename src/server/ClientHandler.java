@@ -1,6 +1,8 @@
 package server;
 
-import client.EventEnum;
+import client.models.Censor;
+import client.models.Event;
+import client.models.EventType;
 import server.services.AuthService;
 
 import java.io.DataInputStream;
@@ -9,7 +11,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 
 public class ClientHandler {
 
@@ -18,7 +20,13 @@ public class ClientHandler {
     private DataInputStream in;
     private Server server;
     private String nick;
+    private Boolean admin = false;
     private ArrayList<String> blackList;
+    private Censor censor = new Censor();
+
+    private final static String ERROR_INCORRECT_USERNAME_LOGIN_PASSWORD = "Incorrect username/logo/pass!";
+    private final static String ERROR_INCORRECT_LOGIN_PASSWORD = "Incorrect logo/pass!";
+    private final static String ERROR_ACCOUNT_ALREADY_USED = "Account already used!";
 
     public ClientHandler(Server server, Socket socket) {
         try {
@@ -38,95 +46,125 @@ public class ClientHandler {
     private void eventLoop() {
         try {
             while (true) {
-                String str = in.readUTF();
-                List<String> tokens = Arrays.asList(str.split(" "));
-                String event = tokens.get(0);
-                System.out.println("[EVENT]: " + tokens);
+                String data = in.readUTF();
+                Event event = new Event(data);
+                System.out.println("[EVENT]: " + event.toString());
 
-                EventEnum eventEnum = EventEnum.fromValue(event);
-
-                switch (eventEnum) {
+                switch (event.getType()) {
                     case AUTH: {
                         String nick = null;
-                        if (tokens.size() == 3 && tokens.get(1) != null && tokens.get(2) != null) {
-                            nick = AuthService.getNickname(tokens.get(1), tokens.get(2));
+                        if (event.getArgs().size() == 2 && event.getArgs().get(0) != null && event.getArgs().get(1) != null) {
+                            String login = event.getArgs().get(0);
+                            String password = event.getArgs().get(1);
+                            nick = AuthService.getNickname(login, password);
+                            admin = AuthService.getIsAdmin(nick);
                         }
                         if (nick == null) {
-                            sendEvent(EventEnum.ERROR.getValue(), "Incorrect logo/pass!");
+                            sendEvent(new Event(
+                                    nick,
+                                    EventType.ERROR,
+                                    Collections.singletonList(ERROR_INCORRECT_LOGIN_PASSWORD)));
                             continue;
                         }
                         if (server.isNickBusy(nick)) {
-                            sendEvent(EventEnum.ERROR.getValue(), "Account already used!");
+                            sendEvent(new Event(
+                                    nick,
+                                    EventType.ERROR,
+                                    Collections.singletonList(ERROR_ACCOUNT_ALREADY_USED)));
                             continue;
                         }
                         this.nick = nick;
                         this.blackList = AuthService.getUserBlacklist(nick);
-                        sendEvent(EventEnum.AUTH_OK.getValue(), nick);
+                        sendEvent(new Event(nick, EventType.AUTH_OK, Collections.singletonList(nick)));
                         server.subscribe(ClientHandler.this);
                         continue;
                     }
                     case REGISTER: {
-                        if (tokens.size() == 4 && tokens.get(1) != null && tokens.get(2) != null && tokens.get(3) != null) {
-                            String username = tokens.get(1);
-                            String login = tokens.get(2);
-                            String passwordHash = AuthService.MD5(tokens.get(3));
+                        if (
+                                event.getArgs().size() == 3 &&
+                                event.getArgs().get(0) != null &&
+                                event.getArgs().get(1) != null &&
+                                event.getArgs().get(2) != null
+                        ) {
+                            String username = event.getArgs().get(0);
+                            String login = event.getArgs().get(1);
+                            String passwordHash = AuthService.MD5(event.getArgs().get(2));
 
                             AuthService.addUser(username, login, passwordHash);
                         } else {
-                            sendEvent(EventEnum.ERROR.getValue(), "Incorrect username/logo/pass!");
+                            sendEvent(new Event(
+                                    nick,
+                                    EventType.ERROR,
+                                    Collections.singletonList(ERROR_INCORRECT_USERNAME_LOGIN_PASSWORD)));
                         }
                         continue;
                     }
                     case HELP: {
-                        sendEvent(EventEnum.HELP.getValue(), nick);
+                        sendEvent(new Event(nick, EventType.HELP, null));
                         continue;
                     }
                     case PRIVATE_MESSAGE: {
-                        server.privateEvent(tokens.get(1), EventEnum.MESSAGE.getValue(), tokens.get(2), String.join(" ", tokens.subList(3, tokens.size())));
+                        String toUser = event.getArgs().get(0);
+                        server.privateEvent(toUser, event);
                         continue;
                     }
-                    case MESSAGE: {
-                        server.broadcastEvent(this, EventEnum.MESSAGE.getValue(), tokens.get(1), String.join(" ", tokens.subList(2, tokens.size())));
-                        continue;
-                    }
-                    case STICKER: {
-                        server.broadcastEvent(this, EventEnum.STICKER.getValue(), tokens.get(1), tokens.get(2));
-                        continue;
-                    }
+                    case MESSAGE:
+                        Boolean isDangerUser = censor.checkMessage(event.getAuthor(), event.getArgs());
+                        if (isDangerUser) {
+                            server.blockUser(event.getAuthor());
+                        }
+                    case STICKER:
                     case IMAGE: {
-                        server.broadcastEvent(this, EventEnum.IMAGE.getValue(), tokens.get(1), tokens.get(2));
+                        server.broadcastEvent(this, event);
                         continue;
                     }
                     case BLACKLIST: {
-                        boolean result = AuthService.addToBlacklist(this.getNick(), tokens.get(1));
+                        String user = event.getArgs().get(0);
+                        boolean result = AuthService.addToBlacklist(this.getNick(), user);
                         this.blackList = AuthService.getUserBlacklist(nick);
-                        if (result) {
-                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Add user " + tokens.get(1) + " to blacklist");
-                        } else {
-                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Error on adding user " + tokens.get(1) + " to blacklist");
-                        }
+                        sendEvent(new Event(
+                                this.getNick(),
+                                EventType.MESSAGE,
+                                result
+                                        ? Arrays.asList(this.nick, "Add user " + user + " to blacklist")
+                                        : Arrays.asList(this.nick, "Error on adding user " +  user + " to blacklist")
+                                )
+                        );
                         continue;
                     }
                     case WHITELIST: {
-                        boolean result = AuthService.removeFromBlacklist(this.getNick(), tokens.get(1));
+                        String user = event.getArgs().get(0);
+                        boolean result = AuthService.removeFromBlacklist(this.getNick(),  user);
                         this.blackList = AuthService.getUserBlacklist(nick);
-                        if (result) {
-                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Remove user " + tokens.get(1) + " from blacklist");
-                        } else {
-                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Error on removing user " + tokens.get(1) + " to blacklist");
-                        }
+                        sendEvent(new Event(
+                                this.getNick(),
+                                EventType.MESSAGE,
+                                result
+                                        ? Arrays.asList(this.nick, "Remove user " +  user + " from blacklist")
+                                        : Arrays.asList(this.nick, "Error on removing user " +  user + " to blacklist")
+                                )
+                        );
                         continue;
                     }
                     case CHANGE_LOGIN:
-                        boolean result = AuthService.changeLogin(this.getNick(), tokens.get(1));
-                        if (result) {
-                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "User " + this.getNick() + " updated login to " + tokens.get(1));
-                        } else {
-                            sendEvent(EventEnum.MESSAGE.getValue(), this.nick, "Error updating login to " + tokens.get(1) + " by user" + this.getNick());
-                        }
+                        String login = event.getArgs().get(0);
+                        boolean result = AuthService.changeLogin(this.getNick(), login);
+                        sendEvent(new Event(
+                                this.getNick(),
+                                EventType.MESSAGE,
+                                result
+                                        ? Collections.singletonList("User " + this.getNick() + " updated login to " + login)
+                                        : Collections.singletonList("Error updating login to " + login + " by user" + this.getNick())
+                                )
+                        );
+                        continue;
+                    case USER_BLOCKED:
+                        String user = event.getArgs().get(0);
+                        sendEvent(new Event(this.getNick(), EventType.USER_BLOCKED, Collections.singletonList(user)));
+                        server.blockUser(user);
                         continue;
                     case END: {
-                        sendEvent(EventEnum.SERVER_CLOSED.getValue());
+                        sendEvent(new Event(this.getNick(), EventType.SERVER_CLOSED, null));
                         break;
                     }
                 }
@@ -146,9 +184,9 @@ public class ClientHandler {
         }
     }
 
-    public void sendEvent(String ... args) {
+    public void sendEvent(Event event) {
         try {
-            out.writeUTF(String.join(" ", Arrays.asList(args)));
+            out.writeUTF(event.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -156,6 +194,10 @@ public class ClientHandler {
 
     public String getNick() {
         return nick;
+    }
+
+    public Boolean isAdmin() {
+        return admin;
     }
 
     public boolean checkBlackList(String nick) {

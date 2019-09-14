@@ -1,10 +1,10 @@
 package client;
 
-import client.io.HistoryReader;
-import client.io.HistoryWriter;
-import client.models.Censor;
-import client.models.Event;
-import client.models.EventType;
+import client.utils.TimeUtil;
+import core.io.HistoryReader;
+import core.io.HistoryWriter;
+import core.models.Event;
+import core.enums.EventType;
 import client.utils.ImageUtil;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -21,7 +21,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import org.sqlite.util.StringUtils;
-import server.services.AuthService;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -177,6 +176,8 @@ public class Controller {
                         setAuthorized(true);
                         currentUser = event.getAuthor();
                         continue;
+                    case ERROR:
+                        showError(StringUtils.join(event.getArgs(), ","));
                     case PRIVATE_MESSAGE:
                     case MESSAGE:
                         appendMessage(event);
@@ -194,7 +195,7 @@ public class Controller {
                         appendUsers(event.getArgs());
                         continue;
                     }
-                    case USER_BLOCKED:
+                    case BLOCK_USER:
                         isBlocked = true;
                         continue;
                     default:
@@ -263,7 +264,7 @@ public class Controller {
     private void appendMessage(Event event) {
         String message = StringUtils.join(event.getArgs(), " ") + "\n";
         Platform.runLater(() -> {
-            appendText(event.getTime(), msgFlow, Color.GREY);
+            appendText(TimeUtil.getCurrentTime(), msgFlow, Color.GREY);
             appendText(event.getAuthor(), msgFlow, Color.YELLOW);
             appendText(message, msgFlow, Color.GHOSTWHITE);
         });
@@ -275,7 +276,7 @@ public class Controller {
             Image image = new Image(url, true);
             ImageView imageView = new ImageView(image);
 
-            appendText(event.getTime(), msgFlow, Color.GREY);
+            appendText(TimeUtil.getCurrentTime(), msgFlow, Color.GREY);
             appendText(event.getAuthor(), msgFlow, Color.YELLOW);
             appendText("\n", msgFlow, Color.TRANSPARENT);
             msgFlow.getChildren().add(imageView);

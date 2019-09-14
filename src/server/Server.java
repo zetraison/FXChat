@@ -1,7 +1,7 @@
 package server;
 
-import client.models.Event;
-import client.models.EventType;
+import core.models.Event;
+import core.enums.EventType;
 import server.services.AuthService;
 
 import java.io.IOException;
@@ -10,8 +10,7 @@ import java.net.Socket;
 import java.util.*;
 
 public class Server {
-
-    private Vector<ClientHandler> clients;
+    private Vector<Client> clients;
 
     public Server(int port) {
         AuthService.connect();
@@ -25,7 +24,7 @@ public class Server {
 
             while (true) {
                 socket = server.accept();
-                new ClientHandler(this, socket);
+                new Client(this, socket);
                 System.out.println("Client connected");
             }
 
@@ -46,82 +45,83 @@ public class Server {
         }
     }
 
-    public void broadcastEvent(ClientHandler from, Event event) {
-        for (ClientHandler client : clients) {
-            if (!client.checkBlackList(from.getNick())) {
-                client.sendEvent(event);
-            }
-        }
-    }
-
-    public void privateEvent(String nickname, Event event) {
-        for (ClientHandler client : clients) {
-            if (client.getNick().equals(nickname)) {
-                client.sendEvent(event);
-            }
-        }
-    }
-
-    public void subscribe(ClientHandler clientHandler) {
-        System.out.println("Client authorized " + clientHandler.getNick());
-        clients.add(clientHandler);
-        broadcastClientList();
-        if (AuthService.getIsAdmin(clientHandler.getNick())) {
-            broadcastForbiddenList();
-        }
-        if (AuthService.getIsBlocked(clientHandler.getNick())) {
-            broadcastUserBlocked(clientHandler.getNick());
-        }
-    }
-
-    public void blockUser(String user) {
-        AuthService.blockUser(user);
-        broadcastUserBlocked(user);
-    }
-
-    public void unsubscribe(ClientHandler clientHandler) {
-        clients.remove(clientHandler);
-        broadcastClientList();
-    }
-
-    public Vector<ClientHandler> getClients() {
+    public Vector<Client> getClients() {
         return clients;
     }
 
-    public boolean isNickBusy(String nickname) {
-        for (ClientHandler client: clients) {
-            if (client.getNick().equalsIgnoreCase(nickname)) {
+    public void subscribe(Client client) {
+        clients.add(client);
+        System.out.println("Client authorized " + client.getUsername());
+        broadcastClientListEvent();
+        if (client.isAdmin()) {
+            broadcastBlockedClientListEvent();
+        }
+        if (client.isBlocked()) {
+            broadcastClientBlockedEvent(client.getUsername());
+        }
+    }
+
+    public void unsubscribe(Client client) {
+        clients.remove(client);
+        System.out.println("Client unauthorized " + client.getUsername());
+        broadcastClientListEvent();
+    }
+
+    public boolean isUsernameBusy(String nickname) {
+        for (Client client: clients) {
+            if (client.getUsername().equalsIgnoreCase(nickname)) {
                 return true;
             }
         }
         return false;
     }
 
-    public void broadcastClientList() {
-        List<String> clientList = new ArrayList<>();
-        for (ClientHandler client: clients) {
-            clientList.add(client.getNick());
-        }
-        for (ClientHandler client: clients) {
-            Event event = new Event(client.getNick(), EventType.CLIENT_LIST, clientList);
-            client.sendEvent(event);
-        }
-    }
-
-    public void broadcastForbiddenList() {
-        List<String> blockedUsers = AuthService.getBlockedUsers();
-        blockedUsers.add(0, "Blocked users: ");
-        for (ClientHandler client: clients) {
-            if (client.isAdmin()) {
-                client.sendEvent(new Event(client.getNick(), EventType.MESSAGE, blockedUsers));
+    public void broadcastEvent(Client fromUser, Event event) {
+        for (Client client : clients) {
+            if (!client.checkUserInBlackList(fromUser.getUsername())) {
+                client.sendEvent(event);
             }
         }
     }
 
-    public void broadcastUserBlocked(String user) {
-        for (ClientHandler client: clients) {
-            if (client.getNick().equals(user)) {
-                client.sendEvent(new Event(client.getNick(), EventType.USER_BLOCKED, Collections.singletonList(user)));
+    public void privateEvent(String toUser, Event event) {
+        for (Client client : clients) {
+            if (client.getUsername().equals(toUser)) {
+                client.sendEvent(event);
+            }
+        }
+    }
+
+    public void blockClient(String user) {
+        AuthService.blockUser(user);
+        broadcastClientBlockedEvent(user);
+    }
+
+    public void broadcastClientListEvent() {
+        List<String> clientList = new ArrayList<>();
+        for (Client client: clients) {
+            clientList.add(client.getUsername());
+        }
+        for (Client client: clients) {
+            Event event = new Event(client.getUsername(), EventType.CLIENT_LIST, clientList);
+            client.sendEvent(event);
+        }
+    }
+
+    public void broadcastBlockedClientListEvent() {
+        List<String> blockedUsers = AuthService.getBlockedUsers();
+        blockedUsers.add(0, "Blocked users: ");
+        for (Client client: clients) {
+            if (client.isAdmin()) {
+                client.sendEvent(new Event(client.getUsername(), EventType.MESSAGE, blockedUsers));
+            }
+        }
+    }
+
+    public void broadcastClientBlockedEvent(String toUser) {
+        for (Client client: clients) {
+            if (client.getUsername().equals(toUser)) {
+                client.sendEvent(new Event(client.getUsername(), EventType.BLOCK_USER, Collections.singletonList(toUser)));
             }
         }
     }

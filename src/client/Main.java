@@ -14,18 +14,20 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        Parent root = FXMLLoader.load(getClass().getResource("resources/ui.fxml"));
+        Parent root = FXMLLoader.load(getClass().getResource("../resources/static/ui.fxml"));
         primaryStage.setTitle("FXChat");
         primaryStage.setMinWidth(WIDTH);
         primaryStage.setMinHeight(HEIGHT);
         Scene scene = new Scene(root, WIDTH, HEIGHT);
         primaryStage.setScene(scene);
         primaryStage.show();
-        primaryStage.setOnCloseRequest(event -> {
-            System.out.println("Stage is closing");
-            Platform.exit();
-            System.exit(0);
-        });
+        primaryStage.setOnCloseRequest(event -> this.onCloseRequest());
+    }
+
+    private void onCloseRequest() {
+        System.out.println("Windows is closing");
+        Platform.exit();
+        System.exit(0);
     }
 
     public static void main(String[] args) {

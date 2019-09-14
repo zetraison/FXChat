@@ -1,5 +1,7 @@
 package server.services;
 
+import com.sun.istack.internal.NotNull;
+
 import java.sql.*;
 import java.util.ArrayList;
 
@@ -25,8 +27,9 @@ public class AuthService {
         }
     }
 
-    public static String getNickname(String login, String pass) {
-        String query = String.format("select username from user\n" +
+    public static String getUsername(String login, String pass) {
+        String query = String.format(
+                "select username from user\n" +
                 "where login = '%s'\n" +
                 "and password_hash = '%s'", login, MD5(pass));
         try {
@@ -40,7 +43,7 @@ public class AuthService {
         return null;
     }
 
-    public static Boolean getIsAdmin(String username) {
+    public static Boolean isAdmin(@NotNull String username) {
         String query = String.format("select admin from user where username = '%s'", username);
         try {
             ResultSet rs = stmt.executeQuery(query);
@@ -53,7 +56,7 @@ public class AuthService {
         return false;
     }
 
-    public static Boolean getIsBlocked(String username) {
+    public static Boolean isBlocked(@NotNull String username) {
         String query = String.format("select blocked from user where username = '%s'", username);
         try {
             ResultSet rs = stmt.executeQuery(query);
@@ -66,7 +69,7 @@ public class AuthService {
         return false;
     }
 
-    private static Integer getUserIdByNickname(String username) {
+    private static Integer getIdByUsername(String username) {
         String query = String.format("select id from user where username = '%s'", username);
         try {
             ResultSet rs = stmt.executeQuery(query);
@@ -88,8 +91,7 @@ public class AuthService {
                 sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100), 1, 3);
             }
             return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-        }
+        } catch (java.security.NoSuchAlgorithmException ignored) { }
         return null;
     }
 
@@ -114,21 +116,18 @@ public class AuthService {
     }
 
     public static ArrayList<String> getUserBlacklist(String username) {
-
-        ArrayList<String> blockedUsernames = new ArrayList<>();
-
+        ArrayList<String> blockedUsernameList = new ArrayList<>();
         String query = String.format(
                 "select u2.username from blacklist b " +
                         "inner join user u1 on b.user_id = u1.id " +
                         "inner join user u2 on b.blocked_user_id = u2.id " +
                         "where u1.username = '%s'", username);
-
         try {
             ResultSet rs = stmt.executeQuery(query);
             while (rs.next()) {
-                blockedUsernames.add(rs.getString(1));
+                blockedUsernameList.add(rs.getString(1));
             }
-            return blockedUsernames;
+            return blockedUsernameList;
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -162,10 +161,9 @@ public class AuthService {
         return null;
     }
 
-    public static boolean addToBlacklist(String username, String blockedUsername) {
-        Integer userId = getUserIdByNickname(username);
-        Integer blockedUserId = getUserIdByNickname(blockedUsername);
-
+    public static void addToBlacklist(String fromUser, String toUser) {
+        Integer userId = getIdByUsername(fromUser);
+        Integer blockedUserId = getIdByUsername(toUser);
         if (userId != null && blockedUserId != null) {
             String query = "insert into blacklist (user_id, blocked_user_id) values (?, ?)";
             try {
@@ -182,15 +180,12 @@ public class AuthService {
                     e.printStackTrace();
                 }
             }
-            return true;
         }
-        return false;
     }
 
-    public static boolean removeFromBlacklist(String username, String blockedUsername) {
-        Integer userId = getUserIdByNickname(username);
-        Integer blockedUserId = getUserIdByNickname(blockedUsername);
-
+    public static void removeFromBlacklist(String fromUser, String toUser) {
+        Integer userId = getIdByUsername(fromUser);
+        Integer blockedUserId = getIdByUsername(toUser);
         if (userId != null && blockedUserId != null) {
             String query = "delete from blacklist where user_id = ? and blocked_user_id = ?";
             try {
@@ -207,14 +202,11 @@ public class AuthService {
                     e.printStackTrace();
                 }
             }
-            return true;
         }
-        return false;
     }
 
-    public static boolean changeLogin(String username, String login) {
-        Integer userId = getUserIdByNickname(username);
-
+    public static void changeLogin(String username, String login) {
+        Integer userId = getIdByUsername(username);
         if (userId != null && login != null) {
             String query = "update user set login = ? where id = ?";
             try {
@@ -231,14 +223,11 @@ public class AuthService {
                     e.printStackTrace();
                 }
             }
-            return true;
         }
-        return false;
     }
 
     public static void blockUser(String username) {
-        Integer userId = getUserIdByNickname(username);
-
+        Integer userId = getIdByUsername(username);
         if (userId != null) {
             String query = "update user set blocked = ? where id = ?";
             try {

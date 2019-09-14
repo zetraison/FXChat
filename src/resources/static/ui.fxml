@@ -81,6 +81,6 @@
             </children></AnchorPane>
     </items>
     <stylesheets>
-        <URL value="@/client/resources/css/style.css" />
+        <URL value="@/resources/static/style.css" />
     </stylesheets>
 </SplitPane>

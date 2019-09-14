@@ -1,4 +1,4 @@
-package client;
+package core.config;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -12,7 +12,7 @@ public class ConfigLoader {
         FileInputStream fis;
         Properties property = new Properties();
         try {
-            fis = new FileInputStream("src/client/resources/config.properties");
+            fis = new FileInputStream("src/resources/config.properties");
             property.load(fis);
         } catch (IOException e) {
             e.printStackTrace();

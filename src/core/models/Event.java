@@ -1,7 +1,8 @@
-package client.models;
+package core.models;
 
 import client.utils.TimeUtil;
 import com.sun.istack.internal.NotNull;
+import core.enums.EventType;
 import org.sqlite.util.StringUtils;
 
 import java.io.Serializable;
@@ -11,7 +12,6 @@ import java.util.List;
 
 public class Event implements Serializable {
     private EventType type;
-    private String time;
     private String author;
     private List<String> args;
 
@@ -19,7 +19,6 @@ public class Event implements Serializable {
         this.author = author != null ? author : "Guest";
         this.type = type;
         this.args = args;
-        this.time = TimeUtil.getCurrentTime();
     }
 
     public Event(String author, @NotNull String text) {
@@ -31,7 +30,6 @@ public class Event implements Serializable {
             this.args = tokens.size() > 1 ? new ArrayList<>(tokens.subList(1, tokens.size())) : null;
         }
         this.author = author != null ? author : "Guest";;
-        this.time = TimeUtil.getCurrentTime();
     }
 
     public Event(@NotNull String text) {
@@ -39,7 +37,6 @@ public class Event implements Serializable {
         this.type = EventType.fromValue(tokens.get(0));
         this.author = tokens.get(1);
         this.args = tokens.size() > 2 ? new ArrayList<>(tokens.subList(2, tokens.size())) : null;
-        this.time = TimeUtil.getCurrentTime();
     }
 
     @Override
@@ -65,14 +62,6 @@ public class Event implements Serializable {
 
     public void setAuthor(String author) {
         this.author = author;
-    }
-
-    public String getTime() {
-        return time;
-    }
-
-    public void setTime(String time) {
-        this.time = time;
     }
 
     public List<String> getArgs() {

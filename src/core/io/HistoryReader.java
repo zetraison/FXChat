@@ -1,17 +1,24 @@
-package client.io;
+package core.io;
 
-import client.ConfigLoader;
+import core.config.ConfigLoader;
 
 import java.io.*;
 
 public class HistoryReader<T> {
-    String filePath = ConfigLoader.load().getProperty("history.filepath");
+    private String path = ConfigLoader.load().getProperty("history.path");
 
+    /**
+     * Read text file and deserialize it
+     * @return deserialize object
+     *tewt
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public T read() throws IOException, ClassNotFoundException {
         ObjectInputStream ois = null;;
         T result = null;
         try {
-            FileInputStream fin = new FileInputStream(filePath);
+            FileInputStream fin = new FileInputStream(path);
             ois = new ObjectInputStream(fin);;
             result = (T) ois.readObject();
         } catch (EOFException e) {
@@ -27,10 +34,15 @@ public class HistoryReader<T> {
         return result;
     }
 
+    /**
+     * Create text file if not exist
+     *
+     * @throws IOException
+     */
     private void createFile() throws IOException {
         BufferedWriter output = null;
         try {
-            File file = new File(filePath);
+            File file = new File(path);
             output = new BufferedWriter(new FileWriter(file));
         } finally {
             System.out.println("History file is created");

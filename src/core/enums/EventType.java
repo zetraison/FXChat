@@ -1,9 +1,10 @@
-package client.models;
+package core.enums;
 
 public enum EventType {
     AUTH("/auth"),
     AUTH_OK("/authok"),
     BLACKLIST("/blacklist"),
+    BLOCK_USER("/blockuser"),
     CHANGE_LOGIN("/changelogin"),
     CLIENT_LIST("/clientlist"),
     END("/end"),
@@ -16,7 +17,6 @@ public enum EventType {
     SERVER_CLOSED("/serverclosed"),
     STICKER("/sticker"),
     USER_LOGIN("/userlogin"),
-    USER_BLOCKED("/userblocked"),
     WHITELIST("/whitelist");
 
     private final String value;

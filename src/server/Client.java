@@ -1,9 +1,9 @@
 package server;
 
-import server.services.CensorService;
-import core.models.Event;
 import core.enums.EventType;
+import core.models.Event;
 import server.services.AuthService;
+import server.services.CensorService;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class Client {
+public class Client  implements Runnable {
     private final static String ERROR_INCORRECT_USERNAME_LOGIN_PASSWORD = "Incorrect username/logo/pass!";
     private final static String ERROR_INCORRECT_LOGIN_PASSWORD = "Incorrect logo/pass!";
     private final static String ERROR_USERNAME_ALREADY_USED = "Username already used!";
@@ -22,6 +22,7 @@ public class Client {
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
+
     private CensorService censorService;
     private ArrayList<String> blackList;
     private String username;
@@ -38,44 +39,18 @@ public class Client {
             this.blackList = new ArrayList<>();
             this.admin = false;
             this.blocked = false;
-
-            new Thread(this::eventLoop).start();
-
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public Boolean isAdmin() {
-        return admin;
-    }
-
-    public Boolean isBlocked() {
-        return blocked;
-    }
-
-    public boolean checkUserInBlackList(String username) {
-        return this.blackList.contains(username);
-    }
-
-    public void sendEvent(Event event) {
-        try {
-            out.writeUTF(event.toString());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void eventLoop() {
+    @Override
+    public void run() {
         try {
             while (true) {
                 String data = in.readUTF();
                 Event event = new Event(data);
-                System.out.println("[EVENT]: " + event.toString());
+                System.out.println("EVENT: " + event.log());
 
                 switch (event.getType()) {
                     case AUTH: {
@@ -136,6 +111,30 @@ public class Client {
                 e.printStackTrace();
             }
             server.unsubscribe(Client.this);
+        }
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public boolean isAdmin() {
+        return admin;
+    }
+
+    public boolean isBlocked() {
+        return blocked;
+    }
+
+    public boolean checkUserInBlackList(String username) {
+        return this.blackList.contains(username);
+    }
+
+    public void sendEvent(Event event) {
+        try {
+            out.writeUTF(event.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

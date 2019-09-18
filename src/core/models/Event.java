@@ -41,34 +41,33 @@ public class Event implements Serializable {
 
     @Override
     public String toString() {
-        String event = this.type.getValue() + " " + this.author;
-        if (this.args != null) {
-            event += " " + StringUtils.join(this.args, " ");
-        }
-        return event;
+        return StringUtils.join(
+                Arrays.asList(
+                        this.type.getValue(),
+                        this.author,
+                        this.args != null ? StringUtils.join(this.args, " ") : ""
+                ),
+                " ");
+    }
+
+    public String log() {
+        return StringUtils.join(
+                Arrays.asList(
+                        "Author=[" +this.author + "]",
+                        "[" + this.type + "]:",
+                        "{" + (this.args != null ? StringUtils.join(this.args, " ") : "") + "}"
+                ),
+                " ");
     }
 
     public EventType getType() {
         return type;
     }
-
-    public void setType(EventType type) {
-        this.type = type;
-    }
-
     public String getAuthor() {
         return author;
     }
 
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
     public List<String> getArgs() {
         return args;
-    }
-
-    public void setArgs(List<String> args) {
-        this.args = args;
     }
 }

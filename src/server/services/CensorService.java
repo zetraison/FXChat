@@ -5,7 +5,7 @@ import core.config.ConfigLoader;
 import java.util.*;
 
 public class CensorService {
-    private String forbiddenWordsConfig = ConfigLoader.load().getProperty("forbiddenWords");
+    private String forbiddenWordsConfig = ConfigLoader.load().getProperty("censor.forbiddenWords");
     private List<String> forbiddenWords = Arrays.asList(forbiddenWordsConfig.split(","));
     private Map<String, Integer> dangerUsers = new HashMap<>();
 

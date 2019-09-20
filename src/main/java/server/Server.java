@@ -3,6 +3,7 @@ package server;
 import core.config.ConfigLoader;
 import core.enums.EventType;
 import core.models.Event;
+import org.apache.log4j.Logger;
 import server.services.AuthService;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
+    private static final Logger LOGGER = Logger.getLogger(Server.class);
     private Vector<Client> clients;
 
     public Server(int port) {
@@ -30,17 +32,18 @@ public class Server {
 
         try {
             server = new ServerSocket(port);
-            System.out.println("Start server on port " + port);
+            LOGGER.info("Start server on port " + port);
             executor = Executors.newFixedThreadPool(threadPoolCount);
 
             while (true) {
                 socket = server.accept();
                 Client client = new Client(this, socket);
                 executor.execute(client);
-                System.out.println("Client connected");
+                LOGGER.info("Client connected");
             }
 
         } catch (IOException e) {
+            LOGGER.error(e);
             e.printStackTrace();
         } finally {
             try {
@@ -62,7 +65,7 @@ public class Server {
 
     public synchronized void subscribe(Client client) {
         clients.add(client);
-        System.out.println("Client authorized: " + client.getUsername());
+        LOGGER.info("Client authorized: " + client.getUsername());
         broadcastClientListEvent();
         if (client.isAdmin()) {
             broadcastBlockedClientListEvent();
@@ -74,7 +77,7 @@ public class Server {
 
     public synchronized void unsubscribe(Client client) {
         clients.remove(client);
-        System.out.println("Client unauthorized " + client.getUsername());
+        LOGGER.info("Client unauthorized " + client.getUsername());
         broadcastClientListEvent();
     }
 

@@ -1,6 +1,5 @@
 package server.services;
 
-import com.sun.istack.internal.NotNull;
 import core.config.ConfigLoader;
 import org.apache.log4j.Logger;
 
@@ -12,7 +11,7 @@ public class AuthService {
 
     private static Connection connection;
     private static Statement stmt;
-    private static String jdbcUrl = ConfigLoader.load().getProperty("datasource.url");
+    private static final String jdbcUrl = ConfigLoader.load().getProperty("datasource.url");
 
     public static void connect() {
         try {
@@ -54,7 +53,7 @@ public class AuthService {
         return null;
     }
 
-    public static Boolean isAdmin(@NotNull String username) {
+    public static Boolean isAdmin(String username) {
         String query = String.format("select admin from user where username = '%s'", username);
         try {
             ResultSet rs = stmt.executeQuery(query);
@@ -73,7 +72,7 @@ public class AuthService {
         return false;
     }
 
-    public static Boolean isBlocked(@NotNull String username) {
+    public static Boolean isBlocked(String username) {
         String query = String.format("select blocked from user where username = '%s'", username);
         try {
             ResultSet rs = stmt.executeQuery(query);
@@ -115,9 +114,9 @@ public class AuthService {
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
             byte[] array = md.digest(md5.getBytes());
-            StringBuffer sb = new StringBuffer();
-            for (int i = 0; i < array.length; ++i) {
-                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100), 1, 3);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : array) {
+                sb.append(Integer.toHexString((b & 0xFF) | 0x100), 1, 3);
             }
             return sb.toString();
         } catch (java.security.NoSuchAlgorithmException ignored) { }

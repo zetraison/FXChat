@@ -26,7 +26,7 @@ public class Server {
         ExecutorService executor = null;
 
         AuthService.connect();
-        clients = new Vector<Client>();
+        clients = new Vector<>();
 
         int threadPoolCount = Integer.parseInt(ConfigLoader.load().getProperty("server.thread-pool-count"));
 
@@ -57,7 +57,7 @@ public class Server {
                     executor.shutdown();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.error(e);
             }
             AuthService.disconnect();
         }
@@ -111,7 +111,7 @@ public class Server {
         broadcastClientBlockedEvent(user);
     }
 
-    public synchronized void broadcastClientListEvent() {
+    private synchronized void broadcastClientListEvent() {
         List<String> clientList = new ArrayList<>();
         for (Client client: clients) {
             clientList.add(client.getUsername());
@@ -122,8 +122,11 @@ public class Server {
         }
     }
 
-    public synchronized void broadcastBlockedClientListEvent() {
+    private synchronized void broadcastBlockedClientListEvent() {
         List<String> blockedUsers = AuthService.getBlockedUsers();
+        if (blockedUsers == null) {
+            return;
+        }
         blockedUsers.add(0, "Blocked users: ");
         for (Client client: clients) {
             if (client.isAdmin()) {
@@ -132,7 +135,7 @@ public class Server {
         }
     }
 
-    public synchronized void broadcastClientBlockedEvent(String toUser) {
+    private synchronized void broadcastClientBlockedEvent(String toUser) {
         for (Client client: clients) {
             if (client.getUsername().equals(toUser)) {
                 client.sendEvent(new Event(client.getUsername(), EventType.BLOCK_USER, Collections.singletonList(toUser)));

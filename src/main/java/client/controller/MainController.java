@@ -1,11 +1,11 @@
 package client.controller;
 
-import core.utils.ImageUtil;
-import core.utils.TimeUtil;
 import core.enums.EventType;
 import core.io.HistoryReader;
 import core.io.HistoryWriter;
 import core.models.Event;
+import core.utils.ImageUtil;
+import core.utils.TimeUtil;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -20,6 +20,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import org.apache.log4j.Logger;
 import org.sqlite.util.StringUtils;
 
 import java.io.DataInputStream;
@@ -33,6 +34,8 @@ import java.util.List;
 
 
 public class MainController {
+    private static final Logger LOGGER = Logger.getLogger(MainController.class);
+
     private static final double MIN_SIDE_PANE_WIDTH = 300.0;
     private static final double MAX_SIDE_PANE_WIDTH = 300.0;
     private static final int STICKER_ROW_LENGTH = 4;
@@ -105,7 +108,7 @@ public class MainController {
             new Thread(this::resetSocketOnTimeout).start();
             new Thread(this::readEvent).start();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Socket connection error." + e);
         }
     }
 
@@ -113,13 +116,13 @@ public class MainController {
         try {
             Thread.sleep(120000);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOGGER.error("Reset socket om timeout error." + e);
         }
         if (!isAuthorized) {
             try {
                 socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.error("Socket close error." + e);
             }
         }
     }
@@ -132,7 +135,7 @@ public class MainController {
         try {
             out.writeUTF(event.toString());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Send event error." + e);
         }
     }
 
@@ -209,12 +212,12 @@ public class MainController {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Read event error." + e);
         } finally {
             try {
                 socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.error("Socket close error." + e);
             }
         }
     }
@@ -238,7 +241,7 @@ public class MainController {
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+            LOGGER.error("History load error." + e);
         }
     }
 
@@ -390,7 +393,7 @@ public class MainController {
 
     private void setRegister(boolean isRegister) {
         this.isRegister = isRegister;
-        if (isRegister) {
+        if (this.isRegister) {
             usernameLabel.setVisible(true);
             usernameField.setVisible(true);
             saveUserBtn.setVisible(true);

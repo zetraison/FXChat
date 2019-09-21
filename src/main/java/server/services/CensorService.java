@@ -10,8 +10,7 @@ import java.util.Map;
 
 public class CensorService {
     private static final Logger LOGGER = Logger.getLogger(CensorService.class);
-
-    private String forbiddenWordsConfig = ConfigLoader.load().getProperty("censor.forbiddenWords");
+    private static final String forbiddenWordsConfig = ConfigLoader.load().getProperty("censor.forbiddenWords");
     private List<String> forbiddenWords = Arrays.asList(forbiddenWordsConfig.split(","));
     private Map<String, Integer> dangerUsers = new HashMap<>();
 
@@ -28,7 +27,7 @@ public class CensorService {
                 LOGGER.info("User " + author + " used forbidden words!");
                 Integer count = dangerUsers.getOrDefault(author, 0);
                 dangerUsers.put(author, ++count);
-            };
+            }
         }
         if (dangerUsers.get(author) != null) {
             return dangerUsers.get(author) >= 3;

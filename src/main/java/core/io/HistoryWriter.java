@@ -1,14 +1,15 @@
 package core.io;
 
 import core.config.ConfigLoader;
+import org.apache.log4j.Logger;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
 public class HistoryWriter<T> {
-
-    String path = ConfigLoader.load().getProperty("history.path");
+    private static final Logger LOGGER = Logger.getLogger(HistoryWriter.class);
+    private static final String path = ConfigLoader.load().getProperty("history.path");
 
     /**
      * Serialize object to text file
@@ -20,5 +21,6 @@ public class HistoryWriter<T> {
         ObjectOutputStream oos = new ObjectOutputStream(fout);
         oos.writeObject(obj);
         oos.close();
+        LOGGER.debug("History file is saved.");
     }
 }

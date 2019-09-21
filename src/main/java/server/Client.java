@@ -53,7 +53,7 @@ public class Client  implements Runnable {
             while (true) {
                 String data = in.readUTF();
                 Event event = new Event(data);
-                LOGGER.info("EVENT: " + event.log());
+                LOGGER.info("Send event: " + event.log());
 
                 switch (event.getType()) {
                     case AUTH: {
@@ -149,7 +149,7 @@ public class Client  implements Runnable {
             username = AuthService.getUsername(login, password);
         }
         if (username == null) {
-            sendEvent(new Event(username, EventType.ERROR, Collections.singletonList(ERROR_INCORRECT_LOGIN_PASSWORD)));
+            sendEvent(new Event(null, EventType.ERROR, Collections.singletonList(ERROR_INCORRECT_LOGIN_PASSWORD)));
             return;
         }
         if (server.isUsernameBusy(username)) {

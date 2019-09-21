@@ -1,30 +1,32 @@
 package core.io;
 
 import core.config.ConfigLoader;
+import org.apache.log4j.Logger;
 
 import java.io.*;
 
 public class HistoryReader<T> {
-    private String path = ConfigLoader.load().getProperty("history.path");
+    private static final Logger LOGGER = Logger.getLogger(HistoryReader.class);
+    private static final String path = ConfigLoader.load().getProperty("history.path");
 
     /**
      * Read text file and deserialize it
      * @return deserialize object
-     *tewt
+     *
      * @throws IOException
      * @throws ClassNotFoundException
      */
     public T read() throws IOException, ClassNotFoundException {
-        ObjectInputStream ois = null;;
+        ObjectInputStream ois = null;
         T result = null;
         try {
             FileInputStream fin = new FileInputStream(path);
-            ois = new ObjectInputStream(fin);;
+            ois = new ObjectInputStream(fin);
             result = (T) ois.readObject();
         } catch (EOFException e) {
-            System.out.println("History file is empty");
+            LOGGER.error("History file is empty.");
         } catch (FileNotFoundException e) {
-            System.out.println("History file is not exist");
+            LOGGER.error("History file is not exist.");
             this.createFile();
         } finally {
             if (ois != null) {
@@ -45,7 +47,7 @@ public class HistoryReader<T> {
             File file = new File(path);
             output = new BufferedWriter(new FileWriter(file));
         } finally {
-            System.out.println("History file is created");
+            LOGGER.info("History file is created.");
             if (output != null) {
                 output.close();
             }

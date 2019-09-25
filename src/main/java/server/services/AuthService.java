@@ -1,15 +1,17 @@
 package server.services;
 
-import com.sun.istack.internal.NotNull;
 import core.config.ConfigLoader;
+import org.apache.log4j.Logger;
 
 import java.sql.*;
 import java.util.ArrayList;
 
 public class AuthService {
+    private static final Logger LOGGER = Logger.getLogger(AuthService.class);
+
     private static Connection connection;
     private static Statement stmt;
-    private static String jdbcUrl = ConfigLoader.load().getProperty("datasource.url");
+    private static final String jdbcUrl = ConfigLoader.load().getProperty("datasource.url");
 
     public static void connect() {
         try {
@@ -17,7 +19,7 @@ public class AuthService {
             connection = DriverManager.getConnection(jdbcUrl);
             stmt = connection.createStatement();
         } catch (ClassNotFoundException | SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("JDBC connection error." + e);
         }
     }
 
@@ -25,7 +27,7 @@ public class AuthService {
         try {
             connection.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("JDBC disconnection error." + e);
         }
     }
 
@@ -40,12 +42,18 @@ public class AuthService {
                 return rs.getString(1);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("getUsername query error." + e);
+        } finally {
+            try {
+                stmt.close();
+            } catch (SQLException e) {
+                LOGGER.error("Sql connection closed error." + e);
+            }
         }
         return null;
     }
 
-    public static Boolean isAdmin(@NotNull String username) {
+    public static Boolean isAdmin(String username) {
         String query = String.format("select admin from user where username = '%s'", username);
         try {
             ResultSet rs = stmt.executeQuery(query);
@@ -53,12 +61,18 @@ public class AuthService {
                 return Integer.parseInt(rs.getString(1)) == 1;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("isAdmin query error." + e);
+        } finally {
+            try {
+                stmt.close();
+            } catch (SQLException e) {
+                LOGGER.error("Sql connection closed error." + e);
+            }
         }
         return false;
     }
 
-    public static Boolean isBlocked(@NotNull String username) {
+    public static Boolean isBlocked(String username) {
         String query = String.format("select blocked from user where username = '%s'", username);
         try {
             ResultSet rs = stmt.executeQuery(query);
@@ -66,7 +80,13 @@ public class AuthService {
                 return Integer.parseInt(rs.getString(1)) == 1;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("isBlocked query error." + e);
+        } finally {
+            try {
+                stmt.close();
+            } catch (SQLException e) {
+                LOGGER.error("Sql connection closed error." + e);
+            }
         }
         return false;
     }
@@ -79,7 +99,13 @@ public class AuthService {
                 return Integer.parseInt(rs.getString(1));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("getIdByUsername query error." + e);
+        } finally {
+            try {
+                stmt.close();
+            } catch (SQLException e) {
+                LOGGER.error("Sql connection closed error." + e);
+            }
         }
         return null;
     }
@@ -88,9 +114,9 @@ public class AuthService {
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
             byte[] array = md.digest(md5.getBytes());
-            StringBuffer sb = new StringBuffer();
-            for (int i = 0; i < array.length; ++i) {
-                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100), 1, 3);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : array) {
+                sb.append(Integer.toHexString((b & 0xFF) | 0x100), 1, 3);
             }
             return sb.toString();
         } catch (java.security.NoSuchAlgorithmException ignored) { }
@@ -107,12 +133,12 @@ public class AuthService {
             stmt.setString(4, "0");
             stmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("getIdByUsername query error." + e);
         } finally {
             try {
                 stmt.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("Sql connection closed error." + e);
             }
         }
     }
@@ -131,12 +157,12 @@ public class AuthService {
             }
             return blockedUsernameList;
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("getUserBlacklist query error." + e);
         } finally {
             try {
                 stmt.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("Sql connection closed error." + e);
             }
         }
         return null;
@@ -152,12 +178,12 @@ public class AuthService {
             }
             return blockedUsers;
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error("getBlockedUsers query error." + e);
         } finally {
             try {
                 stmt.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("Sql connection closed error." + e);
             }
         }
         return null;
@@ -174,12 +200,12 @@ public class AuthService {
                 stmt.setInt(2, blockedUserId);
                 stmt.executeUpdate();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("addToBlacklist query error." + e);
             } finally {
                 try {
                     stmt.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    LOGGER.error("Sql connection closed error." + e);
                 }
             }
         }
@@ -196,12 +222,12 @@ public class AuthService {
                 stmt.setInt(2, blockedUserId);
                 stmt.executeUpdate();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("removeFromBlacklist query error." + e);
             } finally {
                 try {
                     stmt.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    LOGGER.error("Sql connection closed error." + e);
                 }
             }
         }
@@ -217,12 +243,12 @@ public class AuthService {
                 stmt.setInt(2, userId);
                 stmt.executeUpdate();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("changeLogin query error." + e);
             } finally {
                 try {
                     stmt.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    LOGGER.error("Sql connection closed error." + e);
                 }
             }
         }
@@ -238,12 +264,12 @@ public class AuthService {
                 stmt.setInt(2, userId);
                 stmt.executeUpdate();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.error("blockUser query error." + e);
             } finally {
                 try {
                     stmt.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    LOGGER.error("Sql connection closed error." + e);
                 }
             }
         }

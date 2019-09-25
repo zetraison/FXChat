@@ -2,6 +2,7 @@ package server;
 
 import core.enums.EventType;
 import core.models.Event;
+import org.apache.log4j.Logger;
 import server.services.AuthService;
 import server.services.CensorService;
 
@@ -14,6 +15,8 @@ import java.util.Arrays;
 import java.util.Collections;
 
 public class Client  implements Runnable {
+    private static final Logger LOGGER = Logger.getLogger(Client.class);
+
     private final static String ERROR_INCORRECT_USERNAME_LOGIN_PASSWORD = "Incorrect username/logo/pass!";
     private final static String ERROR_INCORRECT_LOGIN_PASSWORD = "Incorrect logo/pass!";
     private final static String ERROR_USERNAME_ALREADY_USED = "Username already used!";
@@ -50,7 +53,7 @@ public class Client  implements Runnable {
             while (true) {
                 String data = in.readUTF();
                 Event event = new Event(data);
-                System.out.println("EVENT: " + event.log());
+                LOGGER.info("Send event: " + event.log());
 
                 switch (event.getType()) {
                     case AUTH: {
@@ -101,14 +104,14 @@ public class Client  implements Runnable {
                 break;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e);
         } finally {
             try {
                 in.close();
                 out.close();
                 socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.error(e);
             }
             server.unsubscribe(Client.this);
         }
@@ -134,7 +137,7 @@ public class Client  implements Runnable {
         try {
             out.writeUTF(event.toString());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Send event error." + e);
         }
     }
 
@@ -146,7 +149,7 @@ public class Client  implements Runnable {
             username = AuthService.getUsername(login, password);
         }
         if (username == null) {
-            sendEvent(new Event(username, EventType.ERROR, Collections.singletonList(ERROR_INCORRECT_LOGIN_PASSWORD)));
+            sendEvent(new Event(null, EventType.ERROR, Collections.singletonList(ERROR_INCORRECT_LOGIN_PASSWORD)));
             return;
         }
         if (server.isUsernameBusy(username)) {

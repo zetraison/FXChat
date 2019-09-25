@@ -3,6 +3,7 @@ package server;
 import core.config.ConfigLoader;
 import core.enums.EventType;
 import core.models.Event;
+import org.apache.log4j.Logger;
 import server.services.AuthService;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
+    private static final Logger LOGGER = Logger.getLogger(Server.class);
     private Vector<Client> clients;
 
     public Server(int port) {
@@ -24,23 +26,24 @@ public class Server {
         ExecutorService executor = null;
 
         AuthService.connect();
-        clients = new Vector<Client>();
+        clients = new Vector<>();
 
         int threadPoolCount = Integer.parseInt(ConfigLoader.load().getProperty("server.thread-pool-count"));
 
         try {
             server = new ServerSocket(port);
-            System.out.println("Start server on port " + port);
+            LOGGER.info("Start server on port " + port);
             executor = Executors.newFixedThreadPool(threadPoolCount);
 
             while (true) {
                 socket = server.accept();
                 Client client = new Client(this, socket);
                 executor.execute(client);
-                System.out.println("Client connected");
+                LOGGER.info("Client connected");
             }
 
         } catch (IOException e) {
+            LOGGER.error(e);
             e.printStackTrace();
         } finally {
             try {
@@ -54,7 +57,7 @@ public class Server {
                     executor.shutdown();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.error(e);
             }
             AuthService.disconnect();
         }
@@ -62,7 +65,7 @@ public class Server {
 
     public synchronized void subscribe(Client client) {
         clients.add(client);
-        System.out.println("Client authorized: " + client.getUsername());
+        LOGGER.info("Client authorized: " + client.getUsername());
         broadcastClientListEvent();
         if (client.isAdmin()) {
             broadcastBlockedClientListEvent();
@@ -74,7 +77,7 @@ public class Server {
 
     public synchronized void unsubscribe(Client client) {
         clients.remove(client);
-        System.out.println("Client unauthorized " + client.getUsername());
+        LOGGER.info("Client unauthorized " + client.getUsername());
         broadcastClientListEvent();
     }
 
@@ -108,7 +111,7 @@ public class Server {
         broadcastClientBlockedEvent(user);
     }
 
-    public synchronized void broadcastClientListEvent() {
+    private synchronized void broadcastClientListEvent() {
         List<String> clientList = new ArrayList<>();
         for (Client client: clients) {
             clientList.add(client.getUsername());
@@ -119,8 +122,11 @@ public class Server {
         }
     }
 
-    public synchronized void broadcastBlockedClientListEvent() {
+    private synchronized void broadcastBlockedClientListEvent() {
         List<String> blockedUsers = AuthService.getBlockedUsers();
+        if (blockedUsers == null) {
+            return;
+        }
         blockedUsers.add(0, "Blocked users: ");
         for (Client client: clients) {
             if (client.isAdmin()) {
@@ -129,7 +135,7 @@ public class Server {
         }
     }
 
-    public synchronized void broadcastClientBlockedEvent(String toUser) {
+    private synchronized void broadcastClientBlockedEvent(String toUser) {
         for (Client client: clients) {
             if (client.getUsername().equals(toUser)) {
                 client.sendEvent(new Event(client.getUsername(), EventType.BLOCK_USER, Collections.singletonList(toUser)));

@@ -1,10 +1,13 @@
 package core.config;
 
+import org.apache.log4j.Logger;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
 public class ConfigLoader {
+    private static final Logger LOGGER = Logger.getLogger(ConfigLoader.class);
 
     public static Properties load() {
         FileInputStream fis;
@@ -13,7 +16,7 @@ public class ConfigLoader {
             fis = new FileInputStream("src/main/resources/config.properties");
             property.load(fis);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Config load error" + e);
         }
         return property;
     }
